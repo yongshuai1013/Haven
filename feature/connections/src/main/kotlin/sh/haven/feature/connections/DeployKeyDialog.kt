@@ -18,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import sh.haven.core.data.db.entities.ConnectionProfile
@@ -38,7 +39,7 @@ fun DeployKeyDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Deploy SSH Key") },
+        title = { Text(stringResource(R.string.connections_deploy_title)) },
         text = {
             Column {
                 Text("${profile.username}@${profile.host}:${profile.port}")
@@ -49,7 +50,7 @@ fun DeployKeyDialog(
                         value = selectedKey?.let { "${it.label} (${it.fingerprintSha256})" } ?: "",
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("SSH key") },
+                        label = { Text(stringResource(R.string.connections_deploy_field_key)) },
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Box(
@@ -76,7 +77,7 @@ fun DeployKeyDialog(
                 PasswordField(
                     value = password,
                     onValueChange = { password = it },
-                    label = "Password",
+                    label = stringResource(R.string.common_password),
                     imeAction = ImeAction.Go,
                     onImeAction = { selectedKey?.let { onDeploy(it.id, password) } },
                     modifier = Modifier
@@ -90,12 +91,12 @@ fun DeployKeyDialog(
                 onClick = { selectedKey?.let { onDeploy(it.id, password) } },
                 enabled = selectedKey != null,
             ) {
-                Text("Deploy")
+                Text(stringResource(R.string.connections_deploy_button))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.common_cancel))
             }
         },
     )

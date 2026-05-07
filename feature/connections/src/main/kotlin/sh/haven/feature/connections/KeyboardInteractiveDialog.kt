@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -63,10 +64,12 @@ fun KeyboardInteractiveDialog(
         onSubmit(responses.toList())
     }
 
+    val titleAdditional = stringResource(R.string.connections_ki_title_additional)
+    val titleServer = stringResource(R.string.connections_ki_title_server)
     val title = when {
         challenge.name.isNotBlank() -> challenge.name
-        challenge.prompts.any { !it.echo } -> "Additional authentication required"
-        else -> "Server prompt"
+        challenge.prompts.any { !it.echo } -> titleAdditional
+        else -> titleServer
     }
 
     AlertDialog(
@@ -98,7 +101,7 @@ fun KeyboardInteractiveDialog(
                         OutlinedTextField(
                             value = responses[i],
                             onValueChange = { responses[i] = it },
-                            label = { Text(prompt.text.ifBlank { "Response" }) },
+                            label = { Text(prompt.text.ifBlank { stringResource(R.string.connections_ki_response_fallback) }) },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Text,
@@ -110,7 +113,7 @@ fun KeyboardInteractiveDialog(
                         PasswordField(
                             value = responses[i],
                             onValueChange = { responses[i] = it },
-                            label = prompt.text.ifBlank { "Response" },
+                            label = prompt.text.ifBlank { stringResource(R.string.connections_ki_response_fallback) },
                             imeAction = imeAction,
                             onImeAction = if (isLast) submit else null,
                             modifier = Modifier.fillMaxWidth(),
@@ -120,10 +123,10 @@ fun KeyboardInteractiveDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = submit) { Text("Submit") }
+            TextButton(onClick = submit) { Text(stringResource(R.string.connections_ki_submit)) }
         },
         dismissButton = {
-            TextButton(onClick = onCancel) { Text("Cancel") }
+            TextButton(onClick = onCancel) { Text(stringResource(R.string.common_cancel)) }
         },
     )
 }

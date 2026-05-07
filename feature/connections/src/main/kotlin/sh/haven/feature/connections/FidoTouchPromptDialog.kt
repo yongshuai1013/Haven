@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -51,17 +52,15 @@ fun FidoTouchPromptDialog(prompt: FidoTouchPrompt) {
 @Composable
 private fun TouchDialog(prompt: FidoTouchPrompt) {
     val (title, body) = when (prompt) {
-        is FidoTouchPrompt.WaitingForKey -> "Security key required" to
-            "Plug in your security key over USB, or tap it on the back of " +
-            "the device for NFC. Haven will continue automatically once it is detected."
+        is FidoTouchPrompt.WaitingForKey -> stringResource(R.string.connections_fido_waiting_title) to
+            stringResource(R.string.connections_fido_waiting_body)
         is FidoTouchPrompt.TouchKey -> when (prompt.transport) {
-            FidoTouchPrompt.TouchKey.Transport.USB -> "Touch your security key" to
-                "Press the button on your security key now to authorise the SSH " +
-                "signature. The key may blink to indicate it is waiting."
-            FidoTouchPrompt.TouchKey.Transport.NFC -> "Hold your security key" to
-                "Keep the security key against the back of the device for two " +
-                "seconds while it signs. Moving it away early aborts the " +
-                "exchange and you'll need to tap it again."
+            FidoTouchPrompt.TouchKey.Transport.USB ->
+                stringResource(R.string.connections_fido_touch_usb_title) to
+                    stringResource(R.string.connections_fido_touch_usb_body)
+            FidoTouchPrompt.TouchKey.Transport.NFC ->
+                stringResource(R.string.connections_fido_touch_nfc_title) to
+                    stringResource(R.string.connections_fido_touch_nfc_body)
         }
         is FidoTouchPrompt.EnterPin -> error("PinEntryDialog handles this state")
     }
@@ -86,7 +85,7 @@ private fun TouchDialog(prompt: FidoTouchPrompt) {
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Cancel by disconnecting from the connections list.",
+                        stringResource(R.string.connections_fido_cancel_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -102,17 +101,16 @@ private fun PinEntryDialog(prompt: FidoTouchPrompt.EnterPin) {
     var pin by remember { mutableStateOf("") }
 
     val retriesNote = prompt.retriesRemaining?.let {
-        "Wrong PIN. $it attempts remaining before the key locks."
+        stringResource(R.string.connections_fido_pin_wrong, it)
     }
 
     AlertDialog(
         onDismissRequest = { prompt.submit(null) },
-        title = { Text("Security key PIN") },
+        title = { Text(stringResource(R.string.connections_fido_pin_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    "This SSH key was registered with verify-required. " +
-                        "Enter the PIN configured on your security key to continue.",
+                    stringResource(R.string.connections_fido_pin_help),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 if (retriesNote != null) {
@@ -125,7 +123,7 @@ private fun PinEntryDialog(prompt: FidoTouchPrompt.EnterPin) {
                 OutlinedTextField(
                     value = pin,
                     onValueChange = { pin = it },
-                    label = { Text("PIN") },
+                    label = { Text(stringResource(R.string.connections_fido_pin_label)) },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -136,10 +134,10 @@ private fun PinEntryDialog(prompt: FidoTouchPrompt.EnterPin) {
             TextButton(
                 onClick = { prompt.submit(pin) },
                 enabled = pin.isNotEmpty(),
-            ) { Text("OK") }
+            ) { Text(stringResource(R.string.common_ok)) }
         },
         dismissButton = {
-            TextButton(onClick = { prompt.submit(null) }) { Text("Cancel") }
+            TextButton(onClick = { prompt.submit(null) }) { Text(stringResource(R.string.common_cancel)) }
         },
     )
 }

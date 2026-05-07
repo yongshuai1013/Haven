@@ -10,6 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import sh.haven.core.ssh.KnownHostEntry
@@ -22,16 +23,16 @@ fun NewHostKeyDialog(
 ) {
     AlertDialog(
         onDismissRequest = onCancel,
-        title = { Text("Verify Host Key") },
+        title = { Text(stringResource(R.string.connections_hostkey_title_verify)) },
         text = {
             Column {
                 val hostDisplay = if (entry.port == 22) entry.hostname
                     else "${entry.hostname}:${entry.port}"
-                Text("Connecting to $hostDisplay for the first time.")
+                Text(stringResource(R.string.connections_hostkey_first_time, hostDisplay))
                 Spacer(Modifier.height(12.dp))
-                Text("Key type: ${entry.keyType}")
+                Text(stringResource(R.string.connections_hostkey_key_type, entry.keyType))
                 Spacer(Modifier.height(8.dp))
-                Text("Fingerprint:")
+                Text(stringResource(R.string.connections_hostkey_fingerprint))
                 Spacer(Modifier.height(4.dp))
                 Text(
                     entry.fingerprint(),
@@ -40,7 +41,7 @@ fun NewHostKeyDialog(
                 )
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    "Verify this fingerprint matches the server's key before trusting.",
+                    stringResource(R.string.connections_hostkey_verify_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -48,12 +49,12 @@ fun NewHostKeyDialog(
         },
         confirmButton = {
             TextButton(onClick = onTrust) {
-                Text("Trust")
+                Text(stringResource(R.string.connections_hostkey_trust))
             }
         },
         dismissButton = {
             TextButton(onClick = onCancel) {
-                Text("Cancel")
+                Text(stringResource(R.string.common_cancel))
             }
         },
     )
@@ -70,7 +71,7 @@ fun KeyChangedDialog(
         onDismissRequest = onDisconnect,
         title = {
             Text(
-                "Host Key Changed",
+                stringResource(R.string.connections_hostkey_changed_title),
                 color = MaterialTheme.colorScheme.error,
             )
         },
@@ -79,19 +80,18 @@ fun KeyChangedDialog(
                 val hostDisplay = if (entry.port == 22) entry.hostname
                     else "${entry.hostname}:${entry.port}"
                 Text(
-                    "The host key for $hostDisplay has changed. " +
-                        "This could indicate a server reinstall or a man-in-the-middle attack.",
+                    stringResource(R.string.connections_hostkey_changed_body, hostDisplay),
                     color = MaterialTheme.colorScheme.error,
                 )
                 Spacer(Modifier.height(12.dp))
-                Text("Old fingerprint:", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.connections_hostkey_old_fingerprint), style = MaterialTheme.typography.bodySmall)
                 Text(
                     oldFingerprint,
                     style = MaterialTheme.typography.bodySmall,
                     fontFamily = FontFamily.Monospace,
                 )
                 Spacer(Modifier.height(8.dp))
-                Text("New fingerprint:", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.connections_hostkey_new_fingerprint), style = MaterialTheme.typography.bodySmall)
                 Text(
                     entry.fingerprint(),
                     style = MaterialTheme.typography.bodySmall,
@@ -101,12 +101,12 @@ fun KeyChangedDialog(
         },
         confirmButton = {
             TextButton(onClick = onAccept) {
-                Text("Accept New Key")
+                Text(stringResource(R.string.connections_hostkey_accept_new))
             }
         },
         dismissButton = {
             TextButton(onClick = onDisconnect) {
-                Text("Disconnect")
+                Text(stringResource(R.string.connections_hostkey_disconnect))
             }
         },
     )

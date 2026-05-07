@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -78,38 +79,40 @@ fun LinuxVmSetupDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Linux VM") },
+        title = { Text(stringResource(R.string.connections_vm_title)) },
         text = {
+            val connectLabel = stringResource(R.string.common_connect)
+            val copiedToast = stringResource(R.string.connections_vm_copied)
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 // Status section
                 if (hasAnyServices) {
-                    Text("Detected services", style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.connections_vm_detected_services), style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
                     if (vmStatus.sshPort != null) {
                         StatusRow(
                             label = "SSH on localhost:${vmStatus.sshPort}",
-                            actionLabel = "Connect",
+                            actionLabel = connectLabel,
                             onClick = { onConnectSsh(vmStatus.sshPort) },
                         )
                     }
                     if (vmStatus.vncPort != null) {
                         StatusRow(
                             label = "VNC on localhost:${vmStatus.vncPort}",
-                            actionLabel = "Connect",
+                            actionLabel = connectLabel,
                             onClick = { onConnectVnc(vmStatus.vncPort) },
                         )
                     }
                     if (vmStatus.directIp != null && vmStatus.directSshPort != null) {
                         StatusRow(
                             label = "SSH on ${vmStatus.directIp}:${vmStatus.directSshPort}",
-                            actionLabel = "Connect",
+                            actionLabel = connectLabel,
                             onClick = { onConnectSshDirect(vmStatus.directIp, vmStatus.directSshPort) },
                         )
                     }
                     if (vmStatus.directIp != null && vmStatus.directVncPort != null) {
                         StatusRow(
                             label = "VNC on ${vmStatus.directIp}:${vmStatus.directVncPort}",
-                            actionLabel = "Connect",
+                            actionLabel = connectLabel,
                             onClick = { onConnectVncDirect(vmStatus.directIp, vmStatus.directVncPort) },
                         )
                     }
@@ -117,78 +120,78 @@ fun LinuxVmSetupDialog(
                 }
 
                 // Quick setup
-                Text("Quick setup", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.connections_vm_quick_setup), style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Installs SSH, VNC, Xfce4 desktop, and apps (browser, editor, file manager):",
+                    stringResource(R.string.connections_vm_install_blurb),
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Spacer(Modifier.height(4.dp))
                 TextButton(onClick = {
                     val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     cm.setPrimaryClip(ClipData.newPlainText("setup", QUICK_SETUP))
-                    Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, copiedToast, Toast.LENGTH_SHORT).show()
                 }) {
                     Icon(Icons.Filled.ContentCopy, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Copy install command")
+                    Text(stringResource(R.string.connections_vm_copy_install))
                 }
                 TextButton(onClick = {
                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(SCRIPT_URL)))
                 }) {
                     Icon(Icons.AutoMirrored.Filled.OpenInNew, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("View script")
+                    Text(stringResource(R.string.connections_vm_view_script))
                 }
 
                 // Collapsible step-by-step instructions
                 var showSteps by remember { mutableStateOf(false) }
                 Spacer(Modifier.height(8.dp))
                 TextButton(onClick = { showSteps = !showSteps }) {
-                    Text(if (showSteps) "Hide setup steps" else "Show setup steps")
+                    Text(stringResource(if (showSteps) R.string.connections_vm_hide_steps else R.string.connections_vm_show_steps))
                 }
 
                 if (showSteps) {
                     Spacer(Modifier.height(8.dp))
 
                     // Launch Terminal app
-                    Text("1. Start the Linux VM", style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.connections_vm_step_start), style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Open the Android Terminal app to boot the VM.",
+                        stringResource(R.string.connections_vm_step_start_body),
                         style = MaterialTheme.typography.bodySmall,
                     )
                     Spacer(Modifier.height(4.dp))
                     TextButton(onClick = { launchTerminalApp(context) }) {
                         Icon(Icons.AutoMirrored.Filled.OpenInNew, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Open Terminal app")
+                        Text(stringResource(R.string.connections_vm_open_terminal))
                     }
 
                     Spacer(Modifier.height(12.dp))
 
                     // Port forwarding
-                    Text("2. Open port 8022", style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.connections_vm_step_open_port), style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "In the Terminal app settings, add port 8022 to the listening ports list.",
+                        stringResource(R.string.connections_vm_step_open_port_body),
                         style = MaterialTheme.typography.bodySmall,
                     )
 
                     Spacer(Modifier.height(12.dp))
 
                     // SSH setup
-                    Text("3. Set password & install SSH", style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.connections_vm_step_password), style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Run in the Terminal app. You'll be prompted to set a password for the droid user.",
+                        stringResource(R.string.connections_vm_step_password_body),
                         style = MaterialTheme.typography.bodySmall,
                     )
                     Spacer(Modifier.height(4.dp))
                     CodeBlock(code = SSH_SETUP, context = context)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Then connect with: droid@localhost:8022",
+                        stringResource(R.string.connections_vm_step_password_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
                     )
@@ -196,10 +199,10 @@ fun LinuxVmSetupDialog(
                     Spacer(Modifier.height(12.dp))
 
                     // VNC setup
-                    Text("4. Install VNC server (optional)", style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.connections_vm_step_vnc), style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "For remote desktop access via Haven's Desktop tab.",
+                        stringResource(R.string.connections_vm_step_vnc_body),
                         style = MaterialTheme.typography.bodySmall,
                     )
                     Spacer(Modifier.height(4.dp))
@@ -208,10 +211,10 @@ fun LinuxVmSetupDialog(
                     Spacer(Modifier.height(12.dp))
 
                     // Desktop environment
-                    Text("5. Install a desktop (optional)", style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.connections_vm_step_desktop), style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Xfce4 is lightweight and works well over VNC.",
+                        stringResource(R.string.connections_vm_step_desktop_body),
                         style = MaterialTheme.typography.bodySmall,
                     )
                     Spacer(Modifier.height(4.dp))
@@ -220,10 +223,10 @@ fun LinuxVmSetupDialog(
                     Spacer(Modifier.height(12.dp))
 
                     // Desktop apps
-                    Text("6. Install desktop apps (optional)", style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.connections_vm_step_apps), style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "File manager, text editor, image viewer, browser, calculator.",
+                        stringResource(R.string.connections_vm_step_apps_body),
                         style = MaterialTheme.typography.bodySmall,
                     )
                     Spacer(Modifier.height(4.dp))
@@ -232,7 +235,7 @@ fun LinuxVmSetupDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Done") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_done)) }
         },
     )
 }

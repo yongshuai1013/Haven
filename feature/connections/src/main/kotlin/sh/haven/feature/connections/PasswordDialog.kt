@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -97,14 +98,16 @@ fun PasswordDialog(
         }
     }
 
+    val passphraseLabel = stringResource(R.string.connections_password_field_passphrase)
+    val passwordLabel = stringResource(R.string.common_password)
     val fieldLabel = when (mode) {
-        PasswordDialogMode.ASSIGNED_ENCRYPTED_KEY_PASSPHRASE -> "Key passphrase"
-        else -> "Password"
+        PasswordDialogMode.ASSIGNED_ENCRYPTED_KEY_PASSPHRASE -> passphraseLabel
+        else -> passwordLabel
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Connect to ${profile.label}") },
+        title = { Text(stringResource(R.string.connections_password_title, profile.label)) },
         text = {
             Column {
                 if (keyboardHasInternet) {
@@ -124,7 +127,7 @@ fun PasswordDialog(
                                 modifier = Modifier.padding(end = 8.dp),
                             )
                             Text(
-                                "Your keyboard has internet access and may transmit what you type. Consider using a privacy keyboard (e.g. HeliBoard, Simple Keyboard).",
+                                stringResource(R.string.connections_password_keyboard_warning),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                             )
@@ -134,9 +137,10 @@ fun PasswordDialog(
                 when {
                     profile.isRdp -> {
                         Text("${profile.rdpUsername ?: profile.username}@${profile.host}:${profile.rdpPort}")
-                        if (!profile.rdpDomain.isNullOrBlank()) {
+                        val domain = profile.rdpDomain
+                        if (!domain.isNullOrBlank()) {
                             Text(
-                                "Domain: ${profile.rdpDomain}",
+                                stringResource(R.string.connections_password_domain, domain),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -150,7 +154,7 @@ fun PasswordDialog(
                     OutlinedTextField(
                         value = username,
                         onValueChange = { username = it },
-                        label = { Text("Username") },
+                        label = { Text(stringResource(R.string.common_username)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Text,
@@ -162,7 +166,7 @@ fun PasswordDialog(
                 if (mode == PasswordDialogMode.ASSIGNED_ENCRYPTED_KEY_PASSPHRASE && assignedKeyLabel != null) {
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Enter the passphrase for SSH key \"$assignedKeyLabel\".",
+                        stringResource(R.string.connections_password_passphrase_for_key, assignedKeyLabel),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -189,11 +193,13 @@ fun PasswordDialog(
                             // When the field holds a key passphrase the
                             // checkbox label should say so too — otherwise
                             // users think they're caching a host password.
-                            if (mode == PasswordDialogMode.ASSIGNED_ENCRYPTED_KEY_PASSPHRASE) {
-                                "Remember key passphrase"
-                            } else {
-                                "Remember password"
-                            },
+                            stringResource(
+                                if (mode == PasswordDialogMode.ASSIGNED_ENCRYPTED_KEY_PASSPHRASE) {
+                                    R.string.connections_password_remember_passphrase
+                                } else {
+                                    R.string.connections_password_remember_password
+                                },
+                            ),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
@@ -208,7 +214,7 @@ fun PasswordDialog(
                 if (mode == PasswordDialogMode.PASSWORD_OR_UNASSIGNED_KEY && profile.isSsh) {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Leave empty to connect with SSH key",
+                        stringResource(R.string.connections_password_leave_empty_for_key),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -217,12 +223,12 @@ fun PasswordDialog(
         },
         confirmButton = {
             TextButton(onClick = submit, enabled = canSubmit) {
-                Text("Connect")
+                Text(stringResource(R.string.connections_password_button))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.common_cancel))
             }
         },
     )

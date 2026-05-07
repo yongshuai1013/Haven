@@ -666,12 +666,12 @@ fun ConnectionsScreen(
             Scaffold(
                 topBar = {
                     TopAppBar(
-                        title = { Text("Desktops") },
+                        title = { Text(stringResource(R.string.connections_section_desktops)) },
                         navigationIcon = {
                             IconButton(onClick = { showDesktopsScreen = false }) {
                                 Icon(
                                     Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back",
+                                    contentDescription = stringResource(R.string.connections_action_back),
                                 )
                             }
                         },
@@ -830,7 +830,7 @@ fun ConnectionsScreen(
         var vncPwd by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { viewModel.dismissDesktopVncPasswordPrompt() },
-            title = { Text("VNC Password") },
+            title = { Text(stringResource(R.string.connections_vnc_password_title)) },
             text = {
                 sh.haven.core.ui.PasswordField(
                     value = vncPwd,
@@ -843,7 +843,7 @@ fun ConnectionsScreen(
                 TextButton(
                     onClick = { viewModel.onDesktopVncPasswordEntered(vncPwd) },
                     enabled = vncPwd.isNotBlank(),
-                ) { Text("Connect") }
+                ) { Text(stringResource(R.string.common_connect)) }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissDesktopVncPasswordPrompt() }) {
@@ -886,14 +886,14 @@ fun ConnectionsScreen(
                     // app installed can still create a regular SSH
                     // profile pointed at it.
                     IconButton(onClick = { viewModel.connectLocalTerminal() }) {
-                        Icon(Icons.Filled.Terminal, contentDescription = "Local terminal")
+                        Icon(Icons.Filled.Terminal, contentDescription = stringResource(R.string.connections_action_local_terminal))
                     }
                     // Desktops likewise — the DesktopManagerSection now
                     // lives behind this icon as a full-screen overlay
                     // rather than always sitting at the top of the list.
                     if (showDesktopsCard && viewModel.isRootfsReady) {
                         IconButton(onClick = { showDesktopsScreen = true }) {
-                            Icon(Icons.Filled.DesktopWindows, contentDescription = "Desktops")
+                            Icon(Icons.Filled.DesktopWindows, contentDescription = stringResource(R.string.connections_section_desktops))
                         }
                     }
                     // Tunnels are connection definitions (per-app
@@ -901,7 +901,7 @@ fun ConnectionsScreen(
                     // through), so they belong on this screen rather
                     // than in app Settings where they used to live.
                     IconButton(onClick = { showTunnelsScreen = true }) {
-                        Icon(Icons.Filled.VpnLock, contentDescription = "Tunnels")
+                        Icon(Icons.Filled.VpnLock, contentDescription = stringResource(R.string.connections_action_tunnels))
                     }
                     IconButton(onClick = { showNewGroupDialog = true }) {
                         Icon(Icons.Filled.CreateNewFolder, contentDescription = stringResource(R.string.connections_new_group_action))
@@ -1576,7 +1576,7 @@ private fun ConnectionTreeItem(
                 // forces a fresh OAuth flow without the user needing
                 // to delete + re-add the connection.
                 DropdownMenuItem(
-                    text = { Text("Re-authenticate") },
+                    text = { Text(stringResource(R.string.connections_action_reauthenticate)) },
                     leadingIcon = { Icon(Icons.Filled.Refresh, null) },
                     onClick = { showMenu = false; onReauthRclone() },
                 )
@@ -1589,7 +1589,7 @@ private fun ConnectionTreeItem(
                 // process restart — that's an rclone-android limitation
                 // documented in RcloneSessionManager.cancelPendingOAuth.
                 DropdownMenuItem(
-                    text = { Text("Cancel OAuth") },
+                    text = { Text(stringResource(R.string.connections_action_cancel_oauth)) },
                     leadingIcon = { Icon(Icons.Filled.Close, null) },
                     onClick = { showMenu = false; onCancelOAuth() },
                 )

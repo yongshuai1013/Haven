@@ -42,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -64,11 +65,14 @@ fun PortForwardDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
+            val titleEdit = stringResource(R.string.connections_pf_dialog_title_edit)
+            val titleNew = stringResource(R.string.connections_pf_dialog_title_new)
+            val titleList = stringResource(R.string.connections_pf_dialog_title_list, profileLabel)
             Text(
                 when {
-                    editingRule != null && rules.any { it.id == editingRule?.id } -> "Edit Port Forward"
-                    editingRule != null -> "New Port Forward"
-                    else -> "Port Forwards for $profileLabel"
+                    editingRule != null && rules.any { it.id == editingRule?.id } -> titleEdit
+                    editingRule != null -> titleNew
+                    else -> titleList
                 },
             )
         },
@@ -89,7 +93,7 @@ fun PortForwardDialog(
                 } else {
                     if (rules.isEmpty()) {
                         Text(
-                            "No port forward rules configured.",
+                            stringResource(R.string.connections_pf_empty),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = 8.dp),
@@ -116,14 +120,14 @@ fun PortForwardDialog(
                 }) {
                     Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Add Rule")
+                    Text(stringResource(R.string.connections_pf_add_rule))
                 }
             }
         },
         dismissButton = {
             if (editingRule == null) {
                 TextButton(onClick = onDismiss) {
-                    Text("Close")
+                    Text(stringResource(R.string.common_close))
                 }
             }
         },
@@ -175,14 +179,14 @@ private fun PortForwardCard(
                     IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
                         Icon(
                             Icons.Filled.Edit,
-                            contentDescription = "Edit",
+                            contentDescription = stringResource(R.string.common_edit),
                             modifier = Modifier.size(18.dp),
                         )
                     }
                     IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
                         Icon(
                             Icons.Filled.Delete,
-                            contentDescription = "Delete",
+                            contentDescription = stringResource(R.string.common_delete),
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(18.dp),
                         )
@@ -406,7 +410,7 @@ private fun PortForwardForm(
                     type = PortForwardRule.Type.LOCAL
                     bindAddress = "127.0.0.1"
                 },
-                label = { Text("Local (-L)") },
+                label = { Text(stringResource(R.string.connections_pf_local)) },
             )
             FilterChip(
                 selected = type == PortForwardRule.Type.REMOTE,
@@ -414,7 +418,7 @@ private fun PortForwardForm(
                     type = PortForwardRule.Type.REMOTE
                     bindAddress = "0.0.0.0"
                 },
-                label = { Text("Remote (-R)") },
+                label = { Text(stringResource(R.string.connections_pf_remote)) },
             )
             FilterChip(
                 selected = isDynamic,
@@ -422,7 +426,7 @@ private fun PortForwardForm(
                     type = PortForwardRule.Type.DYNAMIC
                     bindAddress = "127.0.0.1"
                 },
-                label = { Text("Dynamic (-D)") },
+                label = { Text(stringResource(R.string.connections_pf_dynamic)) },
             )
         }
 
@@ -455,14 +459,14 @@ private fun PortForwardForm(
             OutlinedTextField(
                 value = bindAddress,
                 onValueChange = { bindAddress = it },
-                label = { Text("Address") },
+                label = { Text(stringResource(R.string.connections_pf_address)) },
                 singleLine = true,
                 modifier = Modifier.weight(1.5f),
             )
             OutlinedTextField(
                 value = bindPort,
                 onValueChange = { bindPort = it.filter { c -> c.isDigit() } },
-                label = { Text("Port") },
+                label = { Text(stringResource(R.string.common_port)) },
                 singleLine = true,
                 isError = bindPortError != null && !bindPortIsWarning,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -492,14 +496,14 @@ private fun PortForwardForm(
                 OutlinedTextField(
                     value = targetHost,
                     onValueChange = { targetHost = it },
-                    label = { Text("Host") },
+                    label = { Text(stringResource(R.string.common_host)) },
                     singleLine = true,
                     modifier = Modifier.weight(1.5f),
                 )
                 OutlinedTextField(
                     value = targetPort,
                     onValueChange = { targetPort = it.filter { c -> c.isDigit() } },
-                    label = { Text("Port") },
+                    label = { Text(stringResource(R.string.common_port)) },
                     singleLine = true,
                     isError = targetPortError != null,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -530,7 +534,7 @@ private fun PortForwardForm(
             horizontalArrangement = Arrangement.End,
         ) {
             TextButton(onClick = onCancel) {
-                Text("Cancel")
+                Text(stringResource(R.string.common_cancel))
             }
             Spacer(modifier = Modifier.width(8.dp))
             TextButton(
@@ -550,7 +554,7 @@ private fun PortForwardForm(
                 },
                 enabled = canSave,
             ) {
-                Text("Save")
+                Text(stringResource(R.string.common_save))
             }
         }
     }

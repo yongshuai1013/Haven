@@ -208,4 +208,92 @@
     <string name="connections_session_default_with">默认（%1$s）</string>
     <string name="connections_discovered_count">已发现（%1$d）</string>
     <string name="connections_discovered_count_filtered">已发现（%1$d / %2$d）</string>
+
+    <!-- #135 third pass -->
+
+    <string name="connections_pf_dialog_title_edit">编辑端口转发</string>
+    <string name="connections_pf_dialog_title_new">新建端口转发</string>
+    <string name="connections_pf_dialog_title_list">%1$s 的端口转发</string>
+    <string name="connections_pf_empty">尚未配置任何端口转发规则。</string>
+    <string name="connections_pf_add_rule">添加规则</string>
+    <string name="connections_pf_local">本地（-L）</string>
+    <string name="connections_pf_remote">远程（-R）</string>
+    <string name="connections_pf_dynamic">动态（-D）</string>
+    <string name="connections_pf_address">地址</string>
+
+    <string name="connections_hostkey_title_verify">验证主机密钥</string>
+    <string name="connections_hostkey_first_time">首次连接到 %1$s。</string>
+    <string name="connections_hostkey_key_type">密钥类型：%1$s</string>
+    <string name="connections_hostkey_fingerprint">指纹：</string>
+    <string name="connections_hostkey_trust">信任</string>
+    <string name="connections_hostkey_old_fingerprint">旧指纹：</string>
+    <string name="connections_hostkey_new_fingerprint">新指纹：</string>
+    <string name="connections_hostkey_accept_new">接受新密钥</string>
+    <string name="connections_hostkey_disconnect">断开连接</string>
+    <string name="connections_hostkey_verify_hint">信任前请核对此指纹是否与服务器密钥匹配。</string>
+    <string name="connections_hostkey_changed_title">主机密钥已变更</string>
+    <string name="connections_hostkey_changed_body">%1$s 的主机密钥已变更。这可能是服务器重装，也可能是中间人攻击。</string>
+
+    <string name="connections_deploy_title">部署 SSH 密钥</string>
+    <string name="connections_deploy_field_key">SSH 密钥</string>
+    <string name="connections_deploy_button">部署</string>
+
+    <string name="connections_password_title">连接到 %1$s</string>
+    <string name="connections_password_button">连接</string>
+    <string name="connections_password_field_passphrase">密钥口令</string>
+    <string name="connections_password_keyboard_warning">您的输入法可访问网络，输入内容可能被上传。建议改用注重隐私的输入法（例如 HeliBoard、Simple Keyboard）。</string>
+    <string name="connections_password_domain">域：%1$s</string>
+    <string name="connections_password_passphrase_for_key">请输入 SSH 密钥 "%1$s" 的口令。</string>
+    <string name="connections_password_remember_password">记住密码</string>
+    <string name="connections_password_remember_passphrase">记住密钥口令</string>
+    <string name="connections_password_leave_empty_for_key">留空以使用 SSH 密钥连接</string>
+
+    <string name="connections_fido_pin_title">安全密钥 PIN 码</string>
+    <string name="connections_fido_pin_label">PIN 码</string>
+    <string name="connections_fido_pin_help">此 SSH 密钥需要验证。请输入安全密钥上设置的 PIN 码以继续。</string>
+    <string name="connections_fido_pin_wrong">PIN 码错误。安全密钥锁定前还有 %1$d 次尝试机会。</string>
+    <string name="connections_fido_waiting_title">需要安全密钥</string>
+    <string name="connections_fido_waiting_body">通过 USB 插入安全密钥，或将其贴在设备背面以使用 NFC。检测到密钥后 Haven 会自动继续。</string>
+    <string name="connections_fido_touch_usb_title">触摸您的安全密钥</string>
+    <string name="connections_fido_touch_usb_body">现在按下安全密钥上的按钮以授权 SSH 签名。密钥可能会闪烁提示等待操作。</string>
+    <string name="connections_fido_touch_nfc_title">贴住您的安全密钥</string>
+    <string name="connections_fido_touch_nfc_body">在签名期间将安全密钥贴在设备背面持续两秒。提前移开会中止交换，需要再次贴近。</string>
+    <string name="connections_fido_cancel_hint">如需取消，请从连接列表断开此连接。</string>
+
+    <string name="connections_ki_submit">提交</string>
+    <string name="connections_ki_response_fallback">回答</string>
+    <string name="connections_ki_title_additional">需要进一步的认证</string>
+    <string name="connections_ki_title_server">服务器提示</string>
+
+    <string name="connections_vm_title">Linux 虚拟机</string>
+    <string name="connections_vm_detected_services">已检测到的服务</string>
+    <string name="connections_vm_quick_setup">快速设置</string>
+    <string name="connections_vm_copy_install">复制安装命令</string>
+    <string name="connections_vm_view_script">查看脚本</string>
+    <string name="connections_vm_step_start">1. 启动 Linux 虚拟机</string>
+    <string name="connections_vm_open_terminal">打开终端应用</string>
+    <string name="connections_vm_step_open_port">2. 开放 8022 端口</string>
+    <string name="connections_vm_step_password">3. 设置密码并安装 SSH</string>
+    <string name="connections_vm_step_vnc">4. 安装 VNC 服务器（可选）</string>
+    <string name="connections_vm_step_desktop">5. 安装桌面环境（可选）</string>
+    <string name="connections_vm_step_apps">6. 安装桌面应用（可选）</string>
+    <string name="connections_vm_install_blurb">一键安装 SSH、VNC、Xfce4 桌面以及常用应用（浏览器、编辑器、文件管理器）：</string>
+    <string name="connections_vm_copied">已复制到剪贴板</string>
+    <string name="connections_vm_show_steps">显示设置步骤</string>
+    <string name="connections_vm_hide_steps">隐藏设置步骤</string>
+    <string name="connections_vm_step_start_body">打开 Android 终端应用以启动虚拟机。</string>
+    <string name="connections_vm_step_open_port_body">在终端应用的设置中，将 8022 端口添加到监听端口列表。</string>
+    <string name="connections_vm_step_password_body">在终端应用中运行。系统会提示为 droid 用户设置密码。</string>
+    <string name="connections_vm_step_password_hint">然后通过 droid@localhost:8022 连接</string>
+    <string name="connections_vm_step_vnc_body">用于通过 Haven 的桌面标签页进行远程桌面访问。</string>
+    <string name="connections_vm_step_desktop_body">Xfce4 轻量且通过 VNC 表现良好。</string>
+    <string name="connections_vm_step_apps_body">文件管理器、文本编辑器、图片查看器、浏览器、计算器。</string>
+
+    <string name="connections_section_desktops">桌面</string>
+    <string name="connections_action_back">返回</string>
+    <string name="connections_vnc_password_title">VNC 密码</string>
+    <string name="connections_action_local_terminal">本地终端</string>
+    <string name="connections_action_tunnels">隧道</string>
+    <string name="connections_action_reauthenticate">重新认证</string>
+    <string name="connections_action_cancel_oauth">取消 OAuth</string>
 </resources>
