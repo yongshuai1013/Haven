@@ -103,6 +103,11 @@ fun KeysScreen(
     var showGenerateDialog by remember { mutableStateOf(false) }
     var showStepCaDialog by remember { mutableStateOf(false) }
     val stepCaConfigs by viewModel.stepCaConfigs.collectAsState()
+    // CA section ViewModel — separate hilt instance, shared with the
+    // section composable inside the LazyColumn. (#133 phase 2b — CA
+    // management moved out of Settings into the Keys tab.)
+    val stepCaConfigsViewModel: StepCaConfigsViewModel = hiltViewModel()
+    val stepCaSectionConfigs by stepCaConfigsViewModel.configs.collectAsState()
     var contextMenuKeyId by remember { mutableStateOf<String?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -183,7 +188,7 @@ fun KeysScreen(
             }
         },
     ) { innerPadding ->
-        if (keys.isEmpty() && passwordEntries.isEmpty() && !generating) {
+        if (keys.isEmpty() && passwordEntries.isEmpty() && stepCaSectionConfigs.isEmpty() && !generating) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -216,6 +221,10 @@ fun KeysScreen(
                     .fillMaxSize()
                     .padding(innerPadding),
             ) {
+                item(key = "stepca-ca-section") {
+                    StepCaConfigsSectionContent(viewModel = stepCaConfigsViewModel)
+                    HorizontalDivider()
+                }
                 if (keys.isNotEmpty()) {
                     item(key = "ssh-header") {
                         SectionHeader(stringResource(R.string.keys_section_ssh, keys.size))

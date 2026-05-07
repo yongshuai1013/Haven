@@ -1,20 +1,18 @@
-package sh.haven.feature.settings
+package sh.haven.feature.keys
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
@@ -27,21 +25,19 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,86 +46,65 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
 import sh.haven.core.data.db.entities.StepCaConfig
 import sh.haven.core.stepca.StepCaApiClient
 
 /**
- * Top-level Settings → Certificate Authorities screen. Lists every
- * registered step-ca instance and lets the user add / edit / delete /
- * test each one. Phase 2a of #133 — generation lives on the Keys screen.
+ * Renders the "Certificate authorities" section inside the Keys tab.
+ * Designed to slot into the existing [androidx.compose.foundation.lazy.LazyColumn]
+ * via a sequence of `item { … }` calls, so it composes alongside the
+ * SSH-keys and stored-passwords sections without restructuring the
+ * outer scroll.
+ *
+ * Migrated from the standalone Settings sub-screen (#133 phase 2b
+ * follow-up) — CAs live with credentials, not preferences.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StepCaSettingsScreen(
-    onBack: () -> Unit,
-    viewModel: StepCaSettingsViewModel = hiltViewModel(),
+internal fun StepCaConfigsSectionContent(
+    viewModel: StepCaConfigsViewModel = hiltViewModel(),
 ) {
     val configs by viewModel.configs.collectAsState()
     val testResults by viewModel.testResults.collectAsState()
     val testInFlight by viewModel.testInFlight.collectAsState()
 
-    var editing by remember { mutableStateOf<StepCaConfig?>(null) }
     var addOpen by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<StepCaConfig?>(null) }
     var pendingDelete by remember { mutableStateOf<StepCaConfig?>(null) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.stepca_screen_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.stepca_back),
-                        )
-                    }
-                },
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { addOpen = true }) {
-                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.stepca_add))
-            }
-        },
-    ) { padding ->
-        if (configs.isEmpty()) {
-            Column(
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(
+                    R.string.keys_section_certificate_authorities,
+                    configs.size,
+                ),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
+                    .weight(1f)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+            )
+            IconButton(onClick = { addOpen = true }) {
                 Icon(
-                    Icons.Filled.VpnKey,
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    stringResource(R.string.stepca_empty_state),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 12.dp),
+                    Icons.Filled.Add,
+                    contentDescription = stringResource(R.string.stepca_add),
                 )
             }
-        } else {
-            LazyColumn(modifier = Modifier.padding(padding)) {
-                items(configs, key = { it.id }) { config ->
-                    StepCaConfigRow(
-                        config = config,
-                        testResult = testResults[config.id],
-                        testing = config.id in testInFlight,
-                        onTest = { viewModel.test(config) },
-                        onEdit = { editing = config },
-                        onDelete = { pendingDelete = config },
-                    )
-                }
-            }
+        }
+        configs.forEach { config ->
+            StepCaConfigRow(
+                config = config,
+                testResult = testResults[config.id],
+                testing = config.id in testInFlight,
+                onTest = { viewModel.test(config) },
+                onEdit = { editing = config },
+                onDelete = { pendingDelete = config },
+            )
         }
     }
 
@@ -191,10 +166,6 @@ private fun StepCaConfigRow(
     onDelete: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
-    // Use stringResource(...) directly so a Configuration change (locale
-    // switch, dark-mode flip) invalidates this row — Context.getString
-    // inside remember would cache stale text. Lint id:
-    // LocalContextGetResourceValueCall.
     val supporting: String? = when {
         testing -> null
         testResult is StepCaApiClient.TestResult.Ok ->
@@ -219,8 +190,8 @@ private fun StepCaConfigRow(
                 tint = MaterialTheme.colorScheme.primary,
             )
             testResult is StepCaApiClient.TestResult.BadRootCert ||
-            testResult is StepCaApiClient.TestResult.HttpError ||
-            testResult is StepCaApiClient.TestResult.NetworkError -> Icon(
+                testResult is StepCaApiClient.TestResult.HttpError ||
+                testResult is StepCaApiClient.TestResult.NetworkError -> Icon(
                 Icons.Filled.Error,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.error,
@@ -277,8 +248,7 @@ private fun StepCaConfigDialog(
     initial: StepCaConfig?,
     onDismiss: () -> Unit,
     onConfirm: (StepCaConfig) -> Unit,
-    onDiscoverHostCa: suspend (caUrl: String, rootCertPem: String) ->
-        sh.haven.core.stepca.StepCaApiClient.SshConfigResult,
+    onDiscoverHostCa: suspend (caUrl: String, rootCertPem: String) -> StepCaApiClient.SshConfigResult,
 ) {
     var name by remember { mutableStateOf(initial?.name.orEmpty()) }
     var caUrl by remember { mutableStateOf(initial?.caUrl.orEmpty()) }
@@ -292,7 +262,7 @@ private fun StepCaConfigDialog(
     var sshHostCa by remember { mutableStateOf(initial?.sshHostCaPublicKey.orEmpty()) }
     var discovering by remember { mutableStateOf(false) }
     var discoverError by remember { mutableStateOf<String?>(null) }
-    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+    val coroutineScope = rememberCoroutineScope()
     var error by remember { mutableStateOf<String?>(null) }
 
     val context = LocalContext.current
@@ -388,8 +358,6 @@ private fun StepCaConfigDialog(
                         .fillMaxWidth()
                         .height(120.dp),
                 )
-                // SSH host CA pubkey + auto-discover button. Optional —
-                // when blank, host-cert TOFU bypass is skipped. (#133 2b)
                 OutlinedTextField(
                     value = sshHostCa,
                     onValueChange = { sshHostCa = it },
@@ -409,11 +377,11 @@ private fun StepCaConfigDialog(
                         coroutineScope.launch {
                             try {
                                 when (val r = onDiscoverHostCa(caUrl.trim(), rootCert.trim())) {
-                                    is sh.haven.core.stepca.StepCaApiClient.SshConfigResult.Success -> {
+                                    is StepCaApiClient.SshConfigResult.Success -> {
                                         r.hostKey?.let { sshHostCa = it.trim() }
                                             ?: run { discoverError = "step-ca returned no hostKey" }
                                     }
-                                    is sh.haven.core.stepca.StepCaApiClient.SshConfigResult.Failure ->
+                                    is StepCaApiClient.SshConfigResult.Failure ->
                                         discoverError = r.message
                                 }
                             } finally {

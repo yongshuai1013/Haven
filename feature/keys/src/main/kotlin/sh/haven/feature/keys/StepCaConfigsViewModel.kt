@@ -1,21 +1,27 @@
-package sh.haven.feature.settings
+package sh.haven.feature.keys
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
 import sh.haven.core.data.db.entities.StepCaConfig
 import sh.haven.core.data.repository.StepCaConfigRepository
 import sh.haven.core.stepca.StepCaApiClient
 import javax.inject.Inject
 
+/**
+ * ViewModel for the step-ca CA list rendered as a section inside the
+ * Keys tab. Migrated from `feature/settings/StepCaSettingsViewModel`
+ * — phase 2b moves CA management out of Settings because CAs are
+ * credential-shaped and belong with the rest of the credentials UI.
+ */
 @HiltViewModel
-class StepCaSettingsViewModel @Inject constructor(
+class StepCaConfigsViewModel @Inject constructor(
     private val repository: StepCaConfigRepository,
     private val apiClient: StepCaApiClient,
 ) : ViewModel() {
@@ -24,7 +30,7 @@ class StepCaSettingsViewModel @Inject constructor(
     val configs: StateFlow<List<StepCaConfig>> = repository.observeAll()
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    /** Latest [StepCaApiClient.TestResult] keyed by CA id, for the row's status pill. */
+    /** Latest [StepCaApiClient.TestResult] per CA id, for the row pill. */
     private val _testResults = MutableStateFlow<Map<String, StepCaApiClient.TestResult>>(emptyMap())
     val testResults: StateFlow<Map<String, StepCaApiClient.TestResult>> = _testResults.asStateFlow()
 
@@ -55,11 +61,8 @@ class StepCaSettingsViewModel @Inject constructor(
     }
 
     /**
-     * Auto-discover the SSH host CA public key from step-ca's
-     * `/1.0/ssh/config` endpoint, using the dialog's current
-     * caUrl + rootCertPem (a config that may not be saved yet).
-     * Lets the user fill in the host-CA field with one tap rather
-     * than pasting it manually. (#133 phase 2b)
+     * Auto-discover the SSH host CA pubkey from `/1.0/ssh/config` for
+     * the dialog's current caUrl + rootCertPem (config not yet saved).
      */
     suspend fun discoverSshHostCa(
         caUrl: String,

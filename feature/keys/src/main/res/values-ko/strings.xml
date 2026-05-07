@@ -64,6 +64,7 @@
 
     <!-- copyPublicKey -->
     <string name="keys_ssh_public_key_clip_label">SSH 공개 키</string>
+    <string name="keys_section_certificate_authorities">인증 기관 (%1$d)</string>
     <string name="keys_section_ssh">SSH 키(%1$d)</string>
     <string name="keys_section_passwords">저장된 비밀번호(%1$d)</string>
     <string name="keys_chip_hardware_backed">하드웨어 지원</string>
@@ -82,7 +83,7 @@
     <!-- #133 phase 2: step-ca generate-via-OIDC -->
     <string name="keys_generate_via_stepca">step-ca로 생성</string>
     <string name="keys_generate_via_stepca_hint">OIDC 로그인으로 새 키 쌍과 서명된 인증서를 발급합니다</string>
-    <string name="keys_generate_via_stepca_no_ca">먼저 설정 → 인증 기관에서 CA를 추가하세요</string>
+    <string name="keys_generate_via_stepca_no_ca">위의 인증 기관에서 CA를 먼저 추가하세요</string>
     <string name="keys_stepca_dialog_title">step-ca로 생성</string>
     <string name="keys_stepca_pick_ca">인증 기관</string>
     <string name="keys_stepca_principals_override_label">주체 재정의 (선택, 쉼표로 구분)</string>
@@ -92,4 +93,38 @@
 
     <!-- #133 phase 2b: regenerate menu -->
     <string name="keys_regenerate_via_stepca">step-ca로 재생성</string>
+
+    <!-- #133 phase 2b: step-ca CA registration (moved from Settings) -->
+    <string name="stepca_add_title">인증 기관 추가</string>
+    <string name="stepca_edit_title">인증 기관 편집</string>
+    <string name="stepca_add">추가</string>
+    <string name="stepca_save">저장</string>
+    <string name="stepca_cancel">취소</string>
+    <string name="stepca_delete">삭제</string>
+    <string name="stepca_test_connection">연결 테스트</string>
+    <string name="stepca_field_name">표시 이름</string>
+    <string name="stepca_field_ca_url">CA URL</string>
+    <string name="stepca_field_ca_url_hint">https://ca.example.com</string>
+    <string name="stepca_field_oidc_issuer">OIDC 발급자 URL</string>
+    <string name="stepca_field_oidc_auth_url">OIDC 인증 URL</string>
+    <string name="stepca_field_oidc_token_url">OIDC 토큰 URL</string>
+    <string name="stepca_field_oidc_client_id">OIDC 클라이언트 ID</string>
+    <string name="stepca_field_provisioner">step-ca 프로비저너</string>
+    <string name="stepca_field_principals">기본 주체 (쉼표로 구분)</string>
+    <string name="stepca_field_root_cert">루트 인증서 (PEM)</string>
+    <string name="stepca_field_root_cert_hint">-----BEGIN CERTIFICATE-----…</string>
+    <string name="stepca_test_ok">연결 가능</string>
+    <string name="stepca_test_bad_root_cert">잘못된 루트 인증서: %1$s</string>
+    <string name="stepca_test_http_error">HTTP %1$d: %2$s</string>
+    <string name="stepca_test_network_error">네트워크 오류: %1$s</string>
+    <string name="stepca_empty_state">구성된 인증 기관이 없습니다.\n+를 눌러 추가하세요.</string>
+    <string name="stepca_validation_required">%1$s은(는) 필수입니다</string>
+    <string name="stepca_validation_url">%1$s은(는) https://로 시작해야 합니다</string>
+    <string name="stepca_validation_pem">루트 인증서는 PEM 형식이어야 합니다</string>
+    <string name="stepca_delete_confirm_title">%1$s을(를) 삭제할까요?</string>
+    <string name="stepca_delete_confirm_body">이 CA로 발급된 기존 키는 인증서가 만료될 때까지 작동하지만, 갱신하거나 새로 생성할 수 없습니다.</string>
+    <string name="stepca_field_ssh_host_ca">SSH 호스트 CA 공개 키 (선택)</string>
+    <string name="stepca_field_ssh_host_ca_hint">ssh-ed25519 AAAAC3…</string>
+    <string name="stepca_discover_host_ca">/1.0/ssh/config에서 검색</string>
+    <string name="stepca_discovering">검색 중…</string>
 </resources>
