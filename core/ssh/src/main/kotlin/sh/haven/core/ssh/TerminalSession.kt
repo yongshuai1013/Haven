@@ -55,6 +55,17 @@ class TerminalSession(
     @Volatile
     private var pendingResize: ScheduledFuture<*>? = null
 
+    /**
+     * Last PTY size we asked the remote for. Tracked so [reconnect] can
+     * replay it on the freshly-opened channel — without this, the reader
+     * comes up with an 80×24 default while the local canvas is at its
+     * actual size, and the divergence shows up as wrap-mismatch garbage
+     * in scrollback after a WiFi jump (#120).
+     * 0 means "no resize seen yet"; replay only when we have a real size.
+     */
+    @Volatile private var lastCols: Int = 0
+    @Volatile private var lastRows: Int = 0
+
     private var readerThread: Thread? = null
 
     /**
@@ -168,6 +179,9 @@ class TerminalSession(
 
     fun resize(cols: Int, rows: Int) {
         if (closed || writeExecutor.isShutdown) return
+        // Remember the latest size so reconnect() can replay it (#120).
+        lastCols = cols
+        lastRows = rows
         // Debounce: cancel any pending resize and schedule a new one.
         // During keyboard/tab animations the terminal view resizes every frame;
         // only the final size matters for the remote PTY.
@@ -197,6 +211,29 @@ class TerminalSession(
         sshInput = newChannel.inputStream
         sshOutput = newChannel.outputStream
         Log.d(TAG, "reconnect: swapped channel for $sessionId, starting new reader")
+        // The new channel was opened with the default 80×24 PTY size
+        // (SshClient.openShellChannel defaults). If the user had resized
+        // since session start, replay the last known size on the new
+        // channel so the server's terminal matches the local canvas.
+        // Without this, post-WiFi-jump output wraps at 80 columns while
+        // the client renders at the real width — visible as garbage in
+        // scrollback (#120).
+        val replayCols = lastCols
+        val replayRows = lastRows
+        if (replayCols > 0 && replayRows > 0 && !writeExecutor.isShutdown) {
+            try {
+                writeExecutor.submit {
+                    try {
+                        Log.d(TAG, "reconnect: replaying setPtySize ${replayCols}x${replayRows}")
+                        newClient.resizeShell(newChannel, replayCols, replayRows)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "reconnect: setPtySize replay failed", e)
+                    }
+                }
+            } catch (_: java.util.concurrent.RejectedExecutionException) {
+                // Executor shutdown raced — ignore
+            }
+        }
         readerThread = thread(
             name = "ssh-reader-$sessionId",
             isDaemon = true,
