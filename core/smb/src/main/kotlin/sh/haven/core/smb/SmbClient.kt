@@ -8,6 +8,7 @@ import com.hierynomus.mssmb2.SMB2CreateDisposition
 import com.hierynomus.mssmb2.SMB2CreateOptions
 import com.hierynomus.mssmb2.SMB2ShareAccess
 import com.hierynomus.smbj.SMBClient
+import com.hierynomus.smbj.SmbConfig
 import com.hierynomus.smbj.auth.AuthenticationContext
 import com.hierynomus.smbj.connection.Connection
 import com.hierynomus.smbj.session.Session
@@ -16,6 +17,7 @@ import java.io.Closeable
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.EnumSet
+import javax.net.SocketFactory
 
 private const val TAG = "SmbClient"
 
@@ -45,8 +47,17 @@ class SmbClient : Closeable {
         username: String,
         password: String,
         domain: String,
+        socketFactory: SocketFactory? = null,
     ) {
-        val smbClient = SMBClient()
+        // socketFactory is non-null when the profile routes through a
+        // WireGuard / Tailscale tunnel (#149). smbj dials via the
+        // configured factory; for direct connections we let smbj use
+        // its default (which calls SocketFactory.getDefault()).
+        val smbClient = if (socketFactory != null) {
+            SMBClient(SmbConfig.builder().withSocketFactory(socketFactory).build())
+        } else {
+            SMBClient()
+        }
         val conn = smbClient.connect(host, port)
         val pwChars = password.toCharArray()
         val auth = AuthenticationContext(username, pwChars, domain)

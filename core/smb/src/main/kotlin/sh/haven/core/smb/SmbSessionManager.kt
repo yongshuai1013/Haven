@@ -72,17 +72,18 @@ class SmbSessionManager @Inject constructor() {
         domain: String = "",
         sshClient: Closeable? = null,
         tunnelPort: Int? = null,
+        socketFactory: javax.net.SocketFactory? = null,
     ) {
         _sessions.value[sessionId]
             ?: throw IllegalStateException("Session $sessionId not found")
 
-        Log.d(TAG, "Connecting SMB session: \\\\$host\\$shareName as $username (ssh tunnel: ${sshClient != null})")
+        Log.d(TAG, "Connecting SMB session: \\\\$host\\$shareName as $username (ssh tunnel: ${sshClient != null}, wg/ts tunnel: ${socketFactory != null})")
 
         val client = SmbClient()
         try {
             val connectHost = if (tunnelPort != null) "127.0.0.1" else host
             val connectPort = tunnelPort ?: port
-            client.connect(connectHost, connectPort, shareName, username, password, domain)
+            client.connect(connectHost, connectPort, shareName, username, password, domain, socketFactory)
 
             _sessions.update { map ->
                 val existing = map[sessionId] ?: return@update map

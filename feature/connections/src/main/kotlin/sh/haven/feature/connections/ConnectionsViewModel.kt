@@ -1043,12 +1043,24 @@ class ConnectionsViewModel @Inject constructor(
                     Log.d(TAG, "SMB SSH tunnel: 127.0.0.1:$tunnelPort -> $host:$port")
                 }
 
+                // WireGuard / Tailscale routing — only used when not going
+                // through SSH RemoteForward. SSH-forward already provides
+                // tunneled connectivity via 127.0.0.1:<localPort>, and
+                // routing the SMB profile's own tunnelConfigId through the
+                // SSH session would be a double-hop. (#149)
+                val socketFactory = if (sshClientCloseable == null) {
+                    tunnelResolver.socketFactory(profile)
+                } else {
+                    null
+                }
+
                 val sessionId = smbSessionManager.registerSession(profile.id, profile.label)
                 withContext(Dispatchers.IO) {
                     smbSessionManager.connectSession(
                         sessionId, host, port, shareName, smbUsername, smbPassword, domain,
                         sshClient = sshClientCloseable,
                         tunnelPort = tunnelPort,
+                        socketFactory = socketFactory,
                     )
                 }
                 _navigateToSmb.value = profile.id
