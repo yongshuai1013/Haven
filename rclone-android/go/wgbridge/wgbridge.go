@@ -33,16 +33,19 @@ import (
 	"golang.zx2c4.com/wireguard/conn"
 	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/tun/netstack"
+
+	"sh.haven/rcbridge/socks5"
 )
 
 // TunnelHandle is a live WireGuard tunnel backed by a userspace TUN + the
 // gVisor netstack. Not safe for concurrent Close, but Dial is safe to call
 // concurrently.
 type TunnelHandle struct {
-	dev    *device.Device
-	tnet   *netstack.Net
-	closed bool
-	mu     sync.Mutex
+	dev      *device.Device
+	tnet     *netstack.Net
+	closed   bool
+	socksLn  net.Listener
+	mu       sync.Mutex
 }
 
 // Conn is a TCP connection through a [TunnelHandle]. Bound to gomobile;
@@ -109,6 +112,42 @@ func (t *TunnelHandle) Dial(host string, port int, timeoutMs int) (*Conn, error)
 	return &Conn{c: c}, nil
 }
 
+// StartSocksListener lazily binds a 127.0.0.1 SOCKS5 listener fronting
+// this tunnel and returns its bound TCP port. Idempotent — repeat calls
+// return the same port. Closing the tunnel tears the listener down.
+//
+// Used by transports that can't be intercepted at the Kotlin Socket
+// layer (rclone via HTTPS_PROXY, IronRDP via a vendored SOCKS5 client)
+// so a single SOCKS5 endpoint fronts every TCP transport.
+func (t *TunnelHandle) StartSocksListener() (int, error) {
+	t.mu.Lock()
+	if t.closed {
+		t.mu.Unlock()
+		return 0, errors.New("tunnel closed")
+	}
+	if t.socksLn != nil {
+		port := t.socksLn.Addr().(*net.TCPAddr).Port
+		t.mu.Unlock()
+		return port, nil
+	}
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.mu.Unlock()
+		return 0, fmt.Errorf("bind SOCKS5 listener: %w", err)
+	}
+	t.socksLn = ln
+	tnet := t.tnet
+	t.mu.Unlock()
+
+	go socks5.Serve(ln, func(host string, port int) (net.Conn, error) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		return tnet.DialContext(ctx, "tcp", net.JoinHostPort(host, strconv.Itoa(port)))
+	})
+
+	return ln.Addr().(*net.TCPAddr).Port, nil
+}
+
 // Close tears down the tunnel. Idempotent.
 func (t *TunnelHandle) Close() {
 	t.mu.Lock()
@@ -117,6 +156,10 @@ func (t *TunnelHandle) Close() {
 		return
 	}
 	t.closed = true
+	if t.socksLn != nil {
+		t.socksLn.Close()
+		t.socksLn = nil
+	}
 	if t.dev != nil {
 		t.dev.Close()
 		t.dev = nil

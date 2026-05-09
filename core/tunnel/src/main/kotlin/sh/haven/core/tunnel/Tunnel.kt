@@ -2,6 +2,7 @@ package sh.haven.core.tunnel
 
 import java.io.InputStream
 import java.io.OutputStream
+import java.net.InetSocketAddress
 
 /**
  * A userspace network tunnel. Implementations can be backed by WireGuard,
@@ -18,6 +19,22 @@ interface Tunnel {
      * owned by the caller and must be closed when done.
      */
     fun dial(host: String, port: Int, timeoutMs: Int): TunneledConnection
+
+    /**
+     * Lazily start a localhost SOCKS5 listener fronting this tunnel and
+     * return its bound address (always 127.0.0.1, OS-assigned port).
+     * Idempotent — subsequent calls return the same address. Closing the
+     * tunnel also closes the listener.
+     *
+     * Used by transports that can't be intercepted at the Kotlin Socket
+     * layer (rclone via HTTPS_PROXY, IronRDP via a vendored SOCKS5
+     * client) so a single SOCKS5 endpoint fronts every TCP transport.
+     *
+     * Default implementation returns null — implementations that don't
+     * meaningfully expose a SOCKS surface (test fakes) opt out by
+     * inheriting the default.
+     */
+    fun socksAddress(): InetSocketAddress? = null
 
     /**
      * Tear down the tunnel. All outstanding connections are invalidated.

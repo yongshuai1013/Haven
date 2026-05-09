@@ -41,6 +41,8 @@ import (
 
 	"tailscale.com/net/netmon"
 	"tailscale.com/tsnet"
+
+	"sh.haven/rcbridge/socks5"
 )
 
 // init wires an Android-safe interface enumerator into tsnet's
@@ -230,9 +232,10 @@ func countLeadingOnes(mask []byte) int {
 // TunnelHandle wraps a live tsnet.Server. Safe to Dial concurrently;
 // Close is idempotent but not safe to race with Dial.
 type TunnelHandle struct {
-	srv    *tsnet.Server
-	mu     sync.Mutex
-	closed bool
+	srv     *tsnet.Server
+	mu      sync.Mutex
+	closed  bool
+	socksLn net.Listener
 }
 
 // Conn is a TCP connection through the tunnel. Mirrors wgbridge.Conn so
@@ -358,6 +361,39 @@ func (t *TunnelHandle) Dial(host string, port int, timeoutMs int) (*Conn, error)
 	return &Conn{c: c}, nil
 }
 
+// StartSocksListener lazily binds a 127.0.0.1 SOCKS5 listener fronting
+// this tailnet and returns its bound TCP port. Idempotent; closing the
+// tunnel tears the listener down. Mirrors wgbridge's equivalent — the
+// same Kotlin caller can use either tunnel type.
+func (t *TunnelHandle) StartSocksListener() (int, error) {
+	t.mu.Lock()
+	if t.closed {
+		t.mu.Unlock()
+		return 0, errors.New("tunnel closed")
+	}
+	if t.socksLn != nil {
+		port := t.socksLn.Addr().(*net.TCPAddr).Port
+		t.mu.Unlock()
+		return port, nil
+	}
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.mu.Unlock()
+		return 0, fmt.Errorf("bind SOCKS5 listener: %w", err)
+	}
+	t.socksLn = ln
+	srv := t.srv
+	t.mu.Unlock()
+
+	go socks5.Serve(ln, func(host string, port int) (net.Conn, error) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		return srv.Dial(ctx, "tcp", net.JoinHostPort(host, strconv.Itoa(port)))
+	})
+
+	return ln.Addr().(*net.TCPAddr).Port, nil
+}
+
 // Close tears down the tailnet connection. The state directory is kept
 // intact so a subsequent StartTunnel picks up without re-auth.
 func (t *TunnelHandle) Close() {
@@ -367,6 +403,10 @@ func (t *TunnelHandle) Close() {
 		return
 	}
 	t.closed = true
+	if t.socksLn != nil {
+		t.socksLn.Close()
+		t.socksLn = nil
+	}
 	if t.srv != nil {
 		_ = t.srv.Close()
 		t.srv = nil

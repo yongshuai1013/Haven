@@ -58,12 +58,9 @@ class TunnelResolver @Inject constructor(
         return TunnelSocketFactory(tunnel)
     }
 
-    @Suppress("UNUSED_PARAMETER")
     suspend fun socksEndpoint(profile: ConnectionProfile): InetSocketAddress? {
-        // Pending step 4 of #149 rollout — Tunnel.socksAddress() requires
-        // the wgbridge / tsnet SOCKS5 listener. Until that lands,
-        // FFI-bound transports (rclone, IronRDP) fall through to direct.
-        return null
+        val tunnel = tunnelFor(profile) ?: return null
+        return tunnel.socksAddress()
     }
 
     /**

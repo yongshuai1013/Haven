@@ -6,6 +6,7 @@ import sh.haven.rclone.binding.wgbridge.Wgbridge
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.net.InetSocketAddress
 
 /**
  * [Tunnel] implementation backed by wireguard-go + gVisor netstack via
@@ -25,6 +26,9 @@ class WireguardTunnel internal constructor(configText: String) : Tunnel {
         throw IOException("Failed to start WireGuard tunnel: ${e.message}", e)
     }
 
+    @Volatile
+    private var socksCached: InetSocketAddress? = null
+
     override fun dial(host: String, port: Int, timeoutMs: Int): TunneledConnection {
         val conn = try {
             native.dial(host, port.toLong(), timeoutMs.toLong())
@@ -32,6 +36,19 @@ class WireguardTunnel internal constructor(configText: String) : Tunnel {
             throw IOException("WireGuard dial $host:$port failed: ${e.message}", e)
         }
         return NativeTunneledConnection(conn)
+    }
+
+    override fun socksAddress(): InetSocketAddress? {
+        socksCached?.let { return it }
+        return synchronized(this) {
+            socksCached?.let { return@synchronized it }
+            val port = try {
+                native.startSocksListener().toInt()
+            } catch (e: Exception) {
+                throw IOException("WireGuard SOCKS5 listener failed: ${e.message}", e)
+            }
+            InetSocketAddress("127.0.0.1", port).also { socksCached = it }
+        }
     }
 
     override fun close() {

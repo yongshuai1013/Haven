@@ -73,11 +73,36 @@ class TunnelResolverTest {
     }
 
     @Test
-    fun socksEndpointReturnsNullPendingStep4() = runTest {
-        // Documented behaviour until the wgbridge / tsnet SOCKS5 listener
-        // (step 4 of #149) lands. This test pins the contract so callers
-        // know FFI-bound transports fall through to direct dialling.
+    fun socksEndpointReturnsNullWhenProfileHasNoTunnel() = runTest {
         val resolver = TunnelResolver(mockk(relaxed = true))
+        assertNull(resolver.socksEndpoint(profile(tunnelConfigId = null)))
+    }
+
+    @Test
+    fun socksEndpointForwardsToTunnelSocksAddress() = runTest {
+        val expected = java.net.InetSocketAddress("127.0.0.1", 41234)
+        val tunnel = mockk<Tunnel> {
+            every { socksAddress() } returns expected
+        }
+        val mgr = mockk<TunnelManager> {
+            coEvery { acquire("tid", any()) } returns tunnel
+        }
+        val resolver = TunnelResolver(mgr)
+
+        val addr = resolver.socksEndpoint(profile(tunnelConfigId = "tid"))
+
+        assertSame(expected, addr)
+    }
+
+    @Test
+    fun socksEndpointReturnsNullWhenTunnelOptsOut() = runTest {
+        val tunnel = mockk<Tunnel> {
+            every { socksAddress() } returns null
+        }
+        val mgr = mockk<TunnelManager> {
+            coEvery { acquire("tid", any()) } returns tunnel
+        }
+        val resolver = TunnelResolver(mgr)
         assertNull(resolver.socksEndpoint(profile(tunnelConfigId = "tid")))
     }
 

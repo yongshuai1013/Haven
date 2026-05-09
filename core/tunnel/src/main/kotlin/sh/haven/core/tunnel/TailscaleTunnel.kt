@@ -7,6 +7,7 @@ import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.net.InetSocketAddress
 
 /**
  * [Tunnel] implementation backed by Tailscale's `tsnet` library via the
@@ -38,6 +39,9 @@ class TailscaleTunnel internal constructor(
         throw IOException("Failed to start Tailscale tunnel: ${e.message}", e)
     }
 
+    @Volatile
+    private var socksCached: InetSocketAddress? = null
+
     override fun dial(host: String, port: Int, timeoutMs: Int): TunneledConnection {
         val conn = try {
             native.dial(host, port.toLong(), timeoutMs.toLong())
@@ -45,6 +49,19 @@ class TailscaleTunnel internal constructor(
             throw IOException("Tailscale dial $host:$port failed: ${e.message}", e)
         }
         return TailscaleConnection(conn)
+    }
+
+    override fun socksAddress(): InetSocketAddress? {
+        socksCached?.let { return it }
+        return synchronized(this) {
+            socksCached?.let { return@synchronized it }
+            val port = try {
+                native.startSocksListener().toInt()
+            } catch (e: Exception) {
+                throw IOException("Tailscale SOCKS5 listener failed: ${e.message}", e)
+            }
+            InetSocketAddress("127.0.0.1", port).also { socksCached = it }
+        }
     }
 
     override fun close() {
