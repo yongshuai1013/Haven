@@ -1979,6 +1979,45 @@ class ConnectionsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * "Plain shell" path from the session picker — finish connection
+     * without invoking the configured session manager (tmux / zellij /
+     * screen). Lets a user open a one-off bare bash on a profile that's
+     * normally wrapped in a multiplexer, e.g. for a quick check that
+     * shouldn't disturb the long-running session.
+     *
+     * Only applies to SSH sessions today — Mosh and ET each require a
+     * remote-side helper that's tied to their session-manager wrapping,
+     * so a "plain" path on those transports would mean a different shape
+     * of connection.
+     */
+    fun onPlainShellSelected(sessionId: String) {
+        val sel = _sessionSelection.value
+        _sessionSelection.value = null
+        if (sel?.transportType != "SSH" && sel?.transportType != null) {
+            // Only meaningful for SSH right now; fall through to the
+            // normal "create new session" flow on Mosh/ET so users
+            // don't end up with a silently-no-op button.
+            onSessionSelected(sessionId, null)
+            return
+        }
+        val profileId = sel?.profileId ?: sshSessionManager.getSession(sessionId)?.profileId ?: return
+        viewModelScope.launch {
+            _connectingProfileId.value = profileId
+            try {
+                sshSessionManager.setBypassSessionManager(sessionId, true)
+                sshSessionManager.setChosenSessionName(sessionId, "shell")
+                finishConnect(sessionId, profileId)
+            } catch (e: Exception) {
+                sshSessionManager.updateStatus(sessionId, SshSessionManager.SessionState.Status.ERROR)
+                _error.value = e.message ?: "Connection failed"
+                sshSessionManager.removeSession(sessionId)
+            } finally {
+                _connectingProfileId.value = null
+            }
+        }
+    }
+
     fun onSessionSelected(sessionId: String, sessionName: String?) {
         val sel = _sessionSelection.value
         _sessionSelection.value = null

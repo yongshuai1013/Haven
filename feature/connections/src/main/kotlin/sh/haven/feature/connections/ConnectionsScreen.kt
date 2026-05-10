@@ -749,6 +749,7 @@ fun ConnectionsScreen(
                 // path runs. Any non-empty user input goes through as-is.
                 viewModel.onSessionSelected(selection.sessionId, name.takeIf { it.isNotBlank() })
             },
+            onPlainShell = { viewModel.onPlainShellSelected(selection.sessionId) },
             onDismiss = { viewModel.dismissSessionPicker() },
         )
     }
@@ -1695,6 +1696,7 @@ private fun SessionPickerDialog(
     onKill: (String) -> Unit = {},
     onRename: (old: String, new: String) -> Unit = { _, _ -> },
     onNewSession: (name: String) -> Unit,
+    onPlainShell: () -> Unit = {},
     onDismiss: () -> Unit,
 ) {
     var renamingSession by remember { mutableStateOf<String?>(null) }
@@ -1779,6 +1781,30 @@ private fun SessionPickerDialog(
                 NewSessionInlineRow(
                     suggestedName = suggestedNewName,
                     onCreate = onNewSession,
+                )
+                // Bypass row — opens a plain shell for this connection,
+                // skipping tmux/zellij/screen even when the profile has
+                // one configured. Useful for one-off checks that
+                // shouldn't disturb the long-running multiplexed
+                // session.
+                ListItem(
+                    headlineContent = {
+                        Text(stringResource(R.string.connections_open_plain_shell))
+                    },
+                    supportingContent = {
+                        Text(
+                            stringResource(R.string.connections_open_plain_shell_subtitle, managerLabel),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    },
+                    leadingContent = {
+                        Icon(
+                            Icons.Filled.Terminal,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    modifier = Modifier.clickable { onPlainShell() },
                 )
             }
         },

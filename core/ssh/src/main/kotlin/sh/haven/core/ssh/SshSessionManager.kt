@@ -62,6 +62,15 @@ class SshSessionManager @Inject constructor(
         val sessionManager: SessionManager = SessionManager.NONE,
         val sessionCommandOverride: String? = null,
         val chosenSessionName: String? = null,
+        /**
+         * Per-connection bypass of [sessionManager]. When true,
+         * [buildSessionManagerCommand] returns null even when the
+         * profile has tmux/zellij/screen configured, so the SSH shell
+         * stays as the user's natural login shell. Set from the session
+         * picker's "Plain shell" affordance for one-off bare-bash
+         * sessions on a profile that's normally wrapped in a multiplexer.
+         */
+        val bypassSessionManager: Boolean = false,
         val postLoginCommand: String? = null,
         val postLoginBeforeSessionManager: Boolean = false,
         val activeForwards: List<PortForwardInfo> = emptyList(),
@@ -595,6 +604,13 @@ class SshSessionManager @Inject constructor(
         }
     }
 
+    fun setBypassSessionManager(sessionId: String, bypass: Boolean) {
+        _sessions.update { map ->
+            val existing = map[sessionId] ?: return@update map
+            map + (sessionId to existing.copy(bypassSessionManager = bypass))
+        }
+    }
+
     fun setJumpSessionId(sessionId: String, jumpSessionId: String) {
         _sessions.update { map ->
             val existing = map[sessionId] ?: return@update map
@@ -789,8 +805,11 @@ class SshSessionManager @Inject constructor(
      * Uses the user-chosen session name if set, otherwise a deterministic name.
      */
     private fun buildSessionManagerCommand(sessionId: String, manager: SessionManager): String? {
-        val commandTemplate = manager.command ?: return null
         val session = _sessions.value[sessionId]
+        // Per-session bypass wins over both the manager template and any
+        // sessionCommandOverride — this is the "Plain shell" picker path.
+        if (session?.bypassSessionManager == true) return null
+        val commandTemplate = manager.command ?: return null
         val rawName = session?.chosenSessionName
             ?: session?.label ?: sessionId.take(8)
         // Sanitize for use as tmux/screen/zellij session name (no spaces or shell metacharacters)
