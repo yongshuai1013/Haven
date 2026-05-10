@@ -35,9 +35,10 @@ class SmartCopyTest {
         }
     }
 
-    private fun controller(range: SelectionRange?): SelectionController =
+    private fun controller(range: SelectionRange?, selectedText: String = ""): SelectionController =
         mockk(relaxed = true) {
             every { getSelectionRange() } returns range
+            every { getSelectedText() } returns selectedText
         }
 
     // ---------- smartCopy ----------
@@ -112,6 +113,62 @@ class SmartCopyTest {
             emulator(listOf("whatever")),
         )
         assertNull(out)
+    }
+
+    @Test
+    fun `controller getSelectedText is preferred when non-empty`() {
+        // The fullTexts heuristic would join "abcdefghij" + "klmnopqrst"
+        // because both rows fill the 10-column viewport — but if the
+        // controller already knows (via libvterm's softWrapped flag) that
+        // these rows are NOT wrapped, it wins. This is the case the
+        // heuristic gets wrong.
+        val out = smartCopy(
+            controller(
+                range = SelectionRange(startRow = 0, startCol = 0, endRow = 1, endCol = 9),
+                selectedText = "abcdefghij\nklmnopqrst",
+            ),
+            emulator(listOf("abcdefghij", "klmnopqrst"), columns = 10),
+        )
+        assertEquals("abcdefghij\nklmnopqrst", out)
+    }
+
+    @Test
+    fun `border-strip path bypasses controller getSelectedText`() {
+        // When TUI borders are detected, the panel-extract path takes over
+        // regardless of what the controller would have returned — the
+        // border strip operates on full row text, not the logical
+        // selection. Pass a deliberately wrong getSelectedText() to prove
+        // it isn't consulted on this branch.
+        val out = smartCopy(
+            controller(
+                range = SelectionRange(startRow = 0, startCol = 0, endRow = 2, endCol = 5),
+                selectedText = "WRONG_VALUE_FROM_CONTROLLER",
+            ),
+            emulator(
+                listOf(
+                    "left  | right",
+                    "line2 | data ",
+                    "line3 | more ",
+                ),
+            ),
+        )
+        assertEquals("left\nline2\nline3", out)
+    }
+
+    @Test
+    fun `falls back to fullTexts heuristic when controller returns empty`() {
+        // When the controller can't supply selected text (returns ""),
+        // smartCopy keeps the column-length heuristic as a safety net.
+        // This mirrors today's behaviour for callers that haven't wired
+        // the new method yet.
+        val out = smartCopy(
+            controller(
+                range = SelectionRange(startRow = 0, startCol = 0, endRow = 0, endCol = 4),
+                selectedText = "",
+            ),
+            emulator(listOf("hello world")),
+        )
+        assertEquals("hello", out)
     }
 
     // ---------- SmartTerminalClipboard.setText ----------

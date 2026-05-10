@@ -320,6 +320,14 @@ private fun extractWithSoftWrapUnwrap(
  * 2. Soft-wrap unwrapping — joins lines that were soft-wrapped at the terminal
  *    width boundary, so copied text reads as it would in a wider terminal.
  *
+ * The soft-wrap rejoin is delegated to [SelectionController.getSelectedText],
+ * which uses libvterm's authoritative `softWrapped` flag and so handles cases
+ * the local fullTexts heuristic gets wrong: NUL-padded rows where a wrapped
+ * line trims to less than the column count, and hand-typed lines that happen
+ * to fill the viewport exactly. The local [extractWithSoftWrapUnwrap]
+ * remains as a fallback for callers (or tests) where the controller can't
+ * supply selected text.
+ *
  * Returns null if the emulator snapshot is unavailable; callers should
  * fall back to [SelectionController.copySelection] in that case.
  */
@@ -337,8 +345,21 @@ internal fun smartCopy(
 
     val borderCols = findConsistentBorderColumns(fullTexts)
 
-    return if (borderCols.isNotEmpty()) {
-        extractPanelContent(fullTexts, borderCols, sel.startCol)
+    if (borderCols.isNotEmpty()) {
+        // Border-strip path bypasses soft-wrap rejoin: the panel content is
+        // bounded by vertical box-drawing characters, so we keep one line
+        // per row regardless of wrap state.
+        return extractPanelContent(fullTexts, borderCols, sel.startCol)
+    }
+
+    // Prefer the controller's authoritative text — it consults the real
+    // `softWrapped` flag on each TerminalLine, so wrapped lines rejoin and
+    // hard breaks keep their newlines whether or not the row happens to
+    // exactly fill the viewport. Fall back to the column-length heuristic
+    // only when the controller can't supply text (e.g. unit-test mocks).
+    val fromController = controller.getSelectedText()
+    return if (fromController.isNotEmpty()) {
+        fromController
     } else {
         extractWithSoftWrapUnwrap(fullTexts, sel, columns)
     }
