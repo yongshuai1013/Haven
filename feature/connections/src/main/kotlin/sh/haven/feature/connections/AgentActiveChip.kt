@@ -14,6 +14,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -82,8 +83,12 @@ internal fun AgentActiveChip(
         derivedStateOf { (nowMs - ts) in 0L..ACTIVE_WINDOW_MS }
     }
 
+    // A distinct "active connection" green — Material Green 500 reads
+    // well against both light and dark Surface tones, and avoids
+    // colliding with the theme's primary accent (which is reused
+    // elsewhere for selected-state highlights).
     val tint = if (active) {
-        MaterialTheme.colorScheme.primary
+        Color(0xFF4CAF50)
     } else {
         MaterialTheme.colorScheme.onSurfaceVariant
     }
