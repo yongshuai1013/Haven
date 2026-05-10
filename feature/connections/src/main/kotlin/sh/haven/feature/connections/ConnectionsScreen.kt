@@ -757,7 +757,6 @@ fun ConnectionsScreen(
             onKill = { name -> viewModel.killRemoteSession(name) },
             onRename = { old, new -> viewModel.renameRemoteSession(old, new) },
             plainShellLabel = stringResource(R.string.connections_open_plain_shell),
-            plainShellSubtitle = stringResource(R.string.connections_open_plain_shell_subtitle, selection.managerLabel),
             onPlainShell = { viewModel.onPlainShellSelected(selection.sessionId) },
             cancelLabel = stringResource(R.string.common_cancel),
             renameDialog = { currentLabel, onDismiss, onRenameTo ->

@@ -363,7 +363,6 @@ fun TerminalScreen(
             onRename = { old, new -> viewModel.renameRemoteSession(old, new) },
             error = selection.error,
             plainShellLabel = stringResource(R.string.terminal_open_plain_shell),
-            plainShellSubtitle = stringResource(R.string.terminal_open_plain_shell_subtitle, selection.managerLabel),
             onPlainShell = { viewModel.onNewTabPlainShellSelected(selection.sessionId) },
             cancelLabel = stringResource(R.string.common_cancel),
             renameDialog = { currentLabel, onDismiss, onRenameTo ->

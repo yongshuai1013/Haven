@@ -83,7 +83,6 @@ fun SessionPickerDialog(
     onRename: (old: String, new: String) -> Unit = { _, _ -> },
     error: String? = null,
     plainShellLabel: String? = null,
-    plainShellSubtitle: String? = null,
     onPlainShell: (() -> Unit)? = null,
     cancelLabel: String,
     renameDialog: @Composable (currentLabel: String, onDismiss: () -> Unit, onRename: (String) -> Unit) -> Unit,
@@ -177,9 +176,6 @@ fun SessionPickerDialog(
                 if (onPlainShell != null && plainShellLabel != null) {
                     ListItem(
                         headlineContent = { Text(plainShellLabel) },
-                        supportingContent = plainShellSubtitle?.let { sub -> {
-                            Text(sub, style = MaterialTheme.typography.bodySmall)
-                        } },
                         leadingContent = {
                             Icon(
                                 Icons.Filled.Terminal,

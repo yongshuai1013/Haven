@@ -94,7 +94,6 @@
     <string name="connections_kill_session">Kill session</string>
     <string name="connections_new_session_create">Create</string>
     <string name="connections_open_plain_shell">Open plain shell</string>
-    <string name="connections_open_plain_shell_subtitle">Bypass %1$s for this session — bare login shell</string>
 
     <!-- Rename dialog -->
     <string name="connections_rename_title">Rename Connection</string>
