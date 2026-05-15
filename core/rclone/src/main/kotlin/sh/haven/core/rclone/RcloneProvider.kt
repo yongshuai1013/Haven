@@ -56,6 +56,8 @@ data class TransferStats(
     val transfers: Int,
     val totalTransfers: Int,
     val errors: Int,
+    val deletes: Int = 0,
+    val deletedDirs: Int = 0,
 ) {
     val fraction: Float
         get() = if (totalBytes > 0) (bytes.toFloat() / totalBytes).coerceIn(0f, 1f) else 0f
@@ -144,6 +146,8 @@ data class SyncProgress(
     val transfersCompleted: Int,
     val totalTransfers: Int,
     val errors: Int,
+    val deletes: Int,
+    val deletedDirs: Int,
     val finished: Boolean,
     val success: Boolean,
     val errorMessage: String?,

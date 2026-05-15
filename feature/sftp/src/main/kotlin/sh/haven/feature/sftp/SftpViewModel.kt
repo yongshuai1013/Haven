@@ -4676,6 +4676,8 @@ class SftpViewModel @Inject constructor(
                         transfersCompleted = stats.transfers,
                         totalTransfers = stats.totalTransfers,
                         errors = stats.errors,
+                        deletes = stats.deletes,
+                        deletedDirs = stats.deletedDirs,
                         finished = status.finished,
                         success = status.success,
                         errorMessage = status.error,
@@ -4694,8 +4696,20 @@ class SftpViewModel @Inject constructor(
                     val bytes = android.text.format.Formatter.formatFileSize(appContext, final?.totalBytes ?: 0)
                     _dryRunResult.value = "Would transfer $files files ($bytes)"
                 } else if (final?.success == true) {
-                    val files = final.transfersCompleted
-                    _message.value = "Sync complete: $files files transferred"
+                    val parts = buildList {
+                        add("${final.transfersCompleted} files transferred")
+                        if (final.deletes > 0 || final.deletedDirs > 0) {
+                            val files = final.deletes
+                            val dirs = final.deletedDirs
+                            val deletedStr = when {
+                                files > 0 && dirs > 0 -> "$files files, $dirs dirs deleted"
+                                files > 0 -> "$files files deleted"
+                                else -> "$dirs dirs deleted"
+                            }
+                            add(deletedStr)
+                        }
+                    }
+                    _message.value = "Sync complete: ${parts.joinToString(", ")}"
                     refresh()
                 } else {
                     _error.value = "Sync failed: ${final?.errorMessage ?: "unknown error"}"

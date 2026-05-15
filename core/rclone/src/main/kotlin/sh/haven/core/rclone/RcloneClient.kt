@@ -282,6 +282,8 @@ class RcloneClient @Inject constructor(
             transfers = result.optInt("transfers", 0),
             totalTransfers = result.optInt("totalTransfers", 0),
             errors = result.optInt("errors", 0),
+            deletes = result.optInt("deletes", 0),
+            deletedDirs = result.optInt("deletedDirs", 0),
         )
     }
 

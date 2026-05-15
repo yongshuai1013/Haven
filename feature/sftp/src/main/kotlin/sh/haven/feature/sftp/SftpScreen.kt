@@ -778,8 +778,14 @@ fun SftpScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
-                            "${sp.mode.label}: ${sp.transfersCompleted}/${sp.totalTransfers} files" +
-                                if (sp.errors > 0) " (${sp.errors} errors)" else "",
+                            buildString {
+                                append("${sp.mode.label}: ${sp.transfersCompleted}/${sp.totalTransfers} files")
+                                if (sp.deletes > 0 || sp.deletedDirs > 0) {
+                                    val total = sp.deletes + sp.deletedDirs
+                                    append(", $total deleted")
+                                }
+                                if (sp.errors > 0) append(" (${sp.errors} errors)")
+                            },
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
