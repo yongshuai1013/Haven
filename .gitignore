@@ -33,3 +33,7 @@ build-ffmpeg/dep-*.log
 # Personal dev notes — never committed
 DEV.local.md
 *.local.md
+
+# Kotlin daemon scratch dir — incremental-compile cache + crash logs.
+# Slipped into rc14 by accident.
+.kotlin/
