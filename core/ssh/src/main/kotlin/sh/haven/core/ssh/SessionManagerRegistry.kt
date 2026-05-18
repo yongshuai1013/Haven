@@ -25,6 +25,7 @@ class SessionManagerRegistry @Inject constructor(
     private val smb: SmbSessionManager,
     private val local: LocalSessionManager,
     private val rdp: RdpSessionManager,
+    private val keepAlives: Set<@JvmSuppressWildcards ForegroundKeepAlive>,
 ) {
     /** Disconnect all sessions for a profile across all transports. */
     fun disconnectProfile(profileId: String) {
@@ -37,7 +38,13 @@ class SessionManagerRegistry @Inject constructor(
         rdp.removeAllSessionsForProfile(profileId)
     }
 
-    /** True if any transport has active (connected/connecting) sessions. */
+    /**
+     * True if the FGS should stay running. Any active transport session
+     * keeps it alive (the original semantics), as does any registered
+     * [ForegroundKeepAlive] — currently just the MCP endpoint, which
+     * runs in the Application process and dies with it without the
+     * FGS keep-alive.
+     */
     fun hasActiveSessions(): Boolean =
         ssh.hasActiveSessions ||
             reticulum.activeSessions.isNotEmpty() ||
@@ -45,7 +52,8 @@ class SessionManagerRegistry @Inject constructor(
             et.activeSessions.isNotEmpty() ||
             local.activeSessions.isNotEmpty() ||
             rdp.activeSessions.isNotEmpty() ||
-            smb.activeSessions.isNotEmpty()
+            smb.activeSessions.isNotEmpty() ||
+            keepAlives.any { it.isActive }
 
     /**
      * All sessions across all transports as a unified [Session] view.

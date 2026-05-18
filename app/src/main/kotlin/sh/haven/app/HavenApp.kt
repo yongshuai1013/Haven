@@ -1,6 +1,7 @@
 package sh.haven.app
 
 import android.app.Application
+import android.content.Intent
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
@@ -26,6 +27,7 @@ class HavenApp : Application(), Configuration.Provider {
     @Inject lateinit var workspaceShortcutManager: sh.haven.app.workspace.WorkspaceShortcutManager
     @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var prootManager: sh.haven.core.local.ProotManager
+    @Inject lateinit var sessionManagerRegistry: sh.haven.core.ssh.SessionManagerRegistry
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -82,9 +84,30 @@ class HavenApp : Application(), Configuration.Provider {
                 if (enabled) {
                     mcpServer.start()
                     advertiseEndpointToProot()
+                    // Bind the MCP HTTP listener to the foreground
+                    // service's lifecycle. Without this, the OS reclaims
+                    // the app process within seconds of backgrounding
+                    // and the accept loop dies — agents lose their
+                    // connection and have to re-pair. The MCP endpoint
+                    // is itself a "long-lived user-initiated connection"
+                    // in Android 14+/16 FGS terms, so it belongs to the
+                    // same `specialUse` FGS the SSH/Mosh/VNC/RDP/SFTP
+                    // sessions use. The McpForegroundParticipantModule
+                    // contributes both a session-listing entry (so the
+                    // notification shows "MCP agent endpoint") and a
+                    // ForegroundKeepAlive entry (so an SSH disconnect
+                    // doesn't tear down the FGS while MCP is still on).
+                    startSessionServiceIfPossible()
                 } else {
                     mcpServer.stop()
                     removeEndpointFromProot()
+                    // Stop the FGS only if nothing else is keeping it
+                    // alive. hasActiveSessions now includes the MCP
+                    // keep-alive, which is `false` post-stop, so this
+                    // boils down to "any other transport active?".
+                    if (!sessionManagerRegistry.hasActiveSessions()) {
+                        stopService(Intent(this, sh.haven.core.ssh.SshConnectionService::class.java))
+                    }
                 }
             }
             .launchIn(appScope)
@@ -117,6 +140,24 @@ class HavenApp : Application(), Configuration.Provider {
             android.util.Log.d("HavenApp", "advertised MCP endpoint to ${target.absolutePath}")
         } catch (e: Exception) {
             android.util.Log.w("HavenApp", "failed to advertise MCP endpoint to PRoot: ${e.message}")
+        }
+    }
+
+    /**
+     * Start [SshConnectionService] from the Application context. The
+     * service's onStartCommand calls startForeground within Android's
+     * 5-second budget, so this is safe from a non-Activity context
+     * provided the MCP toggle was changed while the app is in the
+     * foreground (it always is — the toggle lives in Settings). If a
+     * background restart ever flips the preference (none currently
+     * does), the OS may refuse the start; the catch keeps Haven alive.
+     */
+    private fun startSessionServiceIfPossible() {
+        try {
+            val intent = Intent(this, sh.haven.core.ssh.SshConnectionService::class.java)
+            startForegroundService(intent)
+        } catch (e: Exception) {
+            android.util.Log.w("HavenApp", "startForegroundService for MCP keep-alive failed: ${e.message}")
         }
     }
 
