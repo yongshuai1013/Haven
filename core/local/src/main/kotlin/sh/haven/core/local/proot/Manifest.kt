@@ -558,8 +558,15 @@ object DesktopCatalog {
                 set ${'$'}mod Mod4
                 set ${'$'}term foot
 
+                # Headless output: `mode` would auto-enable on most
+                # wlroots versions, but on 0.19+ headless the output
+                # stays DPMS-off until an explicit enable. wayvnc's
+                # ext-image-copy-capture-v1 needs the output enabled
+                # before it'll advertise buffer formats.
                 output HEADLESS-1 mode 1280x720@60
                 output HEADLESS-1 scale 1
+                output HEADLESS-1 enable
+                output HEADLESS-1 dpms on
 
                 input * {
                     xkb_layout "us"

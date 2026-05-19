@@ -413,6 +413,17 @@ class DesktopManager @Inject constructor(
             append("fi ; ")
             append("echo '[haven] compositor up, starting wayvnc on $port' ; ")
             append("export WAYLAND_DISPLAY=wayland-1 ; ")
+            // wayvnc 0.9.1 queries the compositor for ext-image-copy-capture
+            // buffer formats at session-create time. On the wlroots
+            // headless backend the formats only become available after
+            // the compositor has fully realized the virtual output —
+            // before that, the format event list is empty and wayvnc
+            // fails with "No supported buffer formats were found". A
+            // ~2 s grace period after the wayland socket appears is
+            // empirically enough; foot (auto-launched by the seeded
+            // sway/hyprland configs) has rendered its first frame and
+            // the headless output advertises the SHM formats by then.
+            append("sleep 2 ; ")
             // wayvnc 0.5 (Debian Bookworm) doesn't accept --max-fps;
             // restrict to flags supported across the version range
             // 0.5–0.9. wayvnc exits when the compositor dies.
