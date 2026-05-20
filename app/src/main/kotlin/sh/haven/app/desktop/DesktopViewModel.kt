@@ -308,25 +308,21 @@ class DesktopViewModel @Inject constructor(
                 is DesktopStartOutcome.Error -> {
                     Log.e(TAG, "startDesktop: ${de.label} failed — ${outcome.message}")
                     val activeDistro = prootManager.activeDistroId
-                    val msg = "Couldn't start ${de.label} on $activeDistro: ${outcome.message}"
-                    _userMessages.emit(msg)
-                    connectionLogRepository.logEvent(
-                        profileId = "desktop:$activeDistro:${de.spec.id}",
-                        status = ConnectionLog.Status.FAILED,
-                        details = outcome.message,
-                    )
+                    // Surface to the user via a toast + the Manage row's
+                    // ERROR chip (DesktopManager already holds the state).
+                    // NOT persisted to ConnectionLog: that table has a
+                    // foreign key to connection_profiles, and a desktop has
+                    // no profile row — inserting a synthetic id crashed the
+                    // app with SQLITE_CONSTRAINT_FOREIGNKEY on every failing
+                    // nested-Wayland start (Sway/Hyprland/Niri), the
+                    // regression the #169/#162-B error-surfacing introduced.
+                    _userMessages.emit("Couldn't start ${de.label} on $activeDistro: ${outcome.message}")
                     desktopManager.stopDesktop(de)
                     return@launch
                 }
                 is DesktopStartOutcome.Timeout -> {
                     Log.e(TAG, "startDesktop: VNC port $port not listening after 8s")
-                    val msg = "${de.label} didn't come up within 8s — check Settings → View connection log"
-                    _userMessages.emit(msg)
-                    connectionLogRepository.logEvent(
-                        profileId = "desktop:${prootManager.activeDistroId}:${de.spec.id}",
-                        status = ConnectionLog.Status.TIMEOUT,
-                        details = "VNC port $port not listening after 8s",
-                    )
+                    _userMessages.emit("${de.label} didn't come up within 8s")
                     desktopManager.stopDesktop(de)
                     return@launch
                 }
