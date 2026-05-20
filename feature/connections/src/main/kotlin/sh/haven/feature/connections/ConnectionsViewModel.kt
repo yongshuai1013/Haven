@@ -1091,6 +1091,18 @@ class ConnectionsViewModel @Inject constructor(
         connect(profile, password = "", keyOnly = true)
     }
 
+    /**
+     * Clear the saved SSH password for [profileId] (#121b). Mirror of the
+     * existing `repository.save(profile.copy(sshPassword = password))`
+     * remember-password path at line 1810 — same DAO call, just nulled.
+     */
+    fun forgetPassword(profileId: String) {
+        viewModelScope.launch {
+            val profile = repository.getById(profileId) ?: return@launch
+            repository.save(profile.copy(sshPassword = null))
+        }
+    }
+
     fun dismissPasswordFallback() {
         _passwordFallback.value = null
         // If the dialog was opened for a tunnel-mode dependent (#121a),

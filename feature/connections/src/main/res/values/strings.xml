@@ -63,6 +63,11 @@
     <string name="connections_menu_disconnect">Disconnect</string>
     <string name="connections_menu_deploy_ssh_key">Deploy SSH Key</string>
 
+    <!-- Forget saved password (#121b) -->
+    <string name="connections_forget_password">Forget saved password</string>
+    <string name="connections_forget_password_title">Forget saved password?</string>
+    <string name="connections_forget_password_message">Clear the saved SSH password for \"%1$s\"? Future connections will prompt for it again.</string>
+
     <!-- Delete confirmation dialog -->
     <string name="connections_delete_title">Delete connection?</string>
     <string name="connections_delete_message">Delete \"%1$s\"? This cannot be undone.</string>

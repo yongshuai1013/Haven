@@ -51,6 +51,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.LinkOff
+import androidx.compose.material.icons.filled.NoEncryption
 import androidx.compose.material.icons.filled.Password
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
@@ -1173,6 +1174,7 @@ fun ConnectionsScreen(
                                     onDisconnect = { viewModel.disconnect(profile.id) },
                                     onDeployKey = { deployingProfile = profile },
                                     onConnectWithPassword = { connectingProfile = profile },
+                                    onForgetPassword = { viewModel.forgetPassword(profile.id) },
                                     onPortForwards = { portForwardProfile = profile },
                                     onReauthRclone = { viewModel.reauthRcloneProfile(profile) },
                                     onCancelOAuth = { viewModel.cancelPendingOAuth(profile) },
@@ -1275,6 +1277,7 @@ fun ConnectionsScreen(
                                         onDisconnect = { viewModel.disconnect(dep.id) },
                                         onDeployKey = { deployingProfile = dep },
                                         onConnectWithPassword = { connectingProfile = dep },
+                                        onForgetPassword = { viewModel.forgetPassword(dep.id) },
                                         onPortForwards = { portForwardProfile = dep },
                                         onReauthRclone = { viewModel.reauthRcloneProfile(dep) },
                                         onCancelOAuth = { viewModel.cancelPendingOAuth(dep) },
@@ -1399,6 +1402,7 @@ private fun ConnectionTreeItem(
     onDisconnect: () -> Unit,
     onDeployKey: () -> Unit,
     onConnectWithPassword: () -> Unit,
+    onForgetPassword: () -> Unit,
     onPortForwards: () -> Unit,
     onReauthRclone: () -> Unit,
     onCancelOAuth: () -> Unit,
@@ -1413,6 +1417,7 @@ private fun ConnectionTreeItem(
     var showMenu by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showForgetPasswordConfirm by remember { mutableStateOf(false) }
 
     if (showRenameDialog) {
         RenameDialog(
@@ -1438,6 +1443,30 @@ private fun ConnectionTreeItem(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.common_cancel)) }
+            },
+        )
+    }
+
+    if (showForgetPasswordConfirm) {
+        AlertDialog(
+            onDismissRequest = { showForgetPasswordConfirm = false },
+            title = { Text(stringResource(R.string.connections_forget_password_title)) },
+            text = { Text(stringResource(R.string.connections_forget_password_message, profile.label)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showForgetPasswordConfirm = false
+                    onForgetPassword()
+                }) {
+                    Text(
+                        stringResource(R.string.connections_forget_password),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showForgetPasswordConfirm = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
             },
         )
     }
@@ -1595,6 +1624,13 @@ private fun ConnectionTreeItem(
                     text = { Text(stringResource(R.string.connections_menu_connect_with_password)) },
                     leadingIcon = { Icon(Icons.Filled.Password, null) },
                     onClick = { showMenu = false; onConnectWithPassword() },
+                )
+            }
+            if (profile.isSsh && !profile.sshPassword.isNullOrBlank()) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.connections_forget_password)) },
+                    leadingIcon = { Icon(Icons.Filled.NoEncryption, null) },
+                    onClick = { showMenu = false; showForgetPasswordConfirm = true },
                 )
             }
             if (profile.isRclone) {
