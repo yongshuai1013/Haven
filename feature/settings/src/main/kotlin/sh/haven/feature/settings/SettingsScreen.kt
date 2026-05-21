@@ -60,6 +60,8 @@ import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.KeyboardAlt
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Keyboard
@@ -319,11 +321,18 @@ fun SettingsScreen(
             onDismiss = { showFontUrlDialog = false },
         )
     }
+    // Collapsible settings sections — all collapsed by default so the screen
+    // opens compact and users expand only what they need.
+    val settingsExpanded = remember {
+        androidx.compose.runtime.mutableStateListOf(
+            false, false, false, false, false, false, false, false, false, false,
+        )
+    }
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(title = { Text(stringResource(R.string.settings_title)) })
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
 
-        SettingsSection(stringResource(R.string.settings_section_security_privacy))
+        CollapsibleSettingsSection(stringResource(R.string.settings_section_security_privacy), settingsExpanded[0], { settingsExpanded[0] = !settingsExpanded[0] }) {
         if (viewModel.biometricAvailable) {
             SettingsToggleItem(
                 icon = Icons.Filled.Fingerprint,
@@ -348,7 +357,8 @@ fun SettingsScreen(
             checked = screenSecurity,
             onCheckedChange = viewModel::setScreenSecurity,
         )
-        SettingsSection(stringResource(R.string.settings_section_appearance))
+        }
+        CollapsibleSettingsSection(stringResource(R.string.settings_section_appearance), settingsExpanded[1], { settingsExpanded[1] = !settingsExpanded[1] }) {
         SettingsItem(
             icon = Icons.Filled.ColorLens,
             title = stringResource(R.string.settings_theme_title),
@@ -420,7 +430,8 @@ fun SettingsScreen(
             )
         }
 
-        SettingsSection(stringResource(R.string.settings_section_keyboard_input))
+        }
+        CollapsibleSettingsSection(stringResource(R.string.settings_section_keyboard_input), settingsExpanded[2], { settingsExpanded[2] = !settingsExpanded[2] }) {
         SettingsItem(
             icon = Icons.Filled.KeyboardAlt,
             title = stringResource(R.string.settings_toolbar_title),
@@ -466,7 +477,8 @@ fun SettingsScreen(
             onCheckedChange = viewModel::setInterceptCtrlShiftV,
         )
 
-        SettingsSection(stringResource(R.string.settings_section_terminal))
+        }
+        CollapsibleSettingsSection(stringResource(R.string.settings_section_terminal), settingsExpanded[3], { settingsExpanded[3] = !settingsExpanded[3] }) {
         SettingsItem(
             icon = Icons.Filled.Terminal,
             title = stringResource(R.string.settings_session_persistence_title),
@@ -537,7 +549,8 @@ fun SettingsScreen(
             onCheckedChange = viewModel::setShowTerminalTabBar,
         )
 
-        SettingsSection(stringResource(R.string.settings_section_desktop))
+        }
+        CollapsibleSettingsSection(stringResource(R.string.settings_section_desktop), settingsExpanded[4], { settingsExpanded[4] = !settingsExpanded[4] }) {
         SettingsToggleItem(
             icon = Icons.Filled.Mouse,
             title = stringResource(R.string.settings_touchpad_input_title),
@@ -560,7 +573,8 @@ fun SettingsScreen(
             onCheckedChange = viewModel::setBandwidthAutoSuggest,
         )
 
-        SettingsSection(stringResource(R.string.settings_section_connections_screen))
+        }
+        CollapsibleSettingsSection(stringResource(R.string.settings_section_connections_screen), settingsExpanded[5], { settingsExpanded[5] = !settingsExpanded[5] }) {
         SettingsToggleItem(
             icon = Icons.Filled.DesktopWindows,
             title = stringResource(R.string.settings_show_desktops_title),
@@ -594,7 +608,8 @@ fun SettingsScreen(
             onCheckedChange = viewModel::setAlwaysShowAllTabs,
         )
 
-        SettingsSection(stringResource(R.string.settings_section_diagnostics))
+        }
+        CollapsibleSettingsSection(stringResource(R.string.settings_section_diagnostics), settingsExpanded[6], { settingsExpanded[6] = !settingsExpanded[6] }) {
         SettingsToggleItem(
             icon = Icons.Filled.History,
             title = stringResource(R.string.settings_connection_logging_title),
@@ -651,7 +666,8 @@ fun SettingsScreen(
             )
         }
 
-        SettingsSection(stringResource(R.string.settings_section_advanced))
+        }
+        CollapsibleSettingsSection(stringResource(R.string.settings_section_advanced), settingsExpanded[7], { settingsExpanded[7] = !settingsExpanded[7] }) {
         SettingsItem(
             icon = Icons.Filled.DesktopWindows,
             title = stringResource(R.string.settings_wayland_shell_title),
@@ -898,7 +914,8 @@ fun SettingsScreen(
             onClick = { showMediaExtensionsDialog = true },
         )
 
-        SettingsSection(stringResource(R.string.settings_section_backup))
+        }
+        CollapsibleSettingsSection(stringResource(R.string.settings_section_backup), settingsExpanded[8], { settingsExpanded[8] = !settingsExpanded[8] }) {
         SettingsItem(
             icon = Icons.Filled.CloudUpload,
             title = stringResource(R.string.settings_export_backup_title),
@@ -926,7 +943,8 @@ fun SettingsScreen(
             )
         }
 
-        SettingsSection(stringResource(R.string.settings_section_about))
+        }
+        CollapsibleSettingsSection(stringResource(R.string.settings_section_about), settingsExpanded[9], { settingsExpanded[9] = !settingsExpanded[9] }) {
         SettingsItem(
             icon = Icons.Filled.Info,
             title = stringResource(R.string.settings_about_title),
@@ -942,6 +960,7 @@ fun SettingsScreen(
             },
         )
 
+        }
     } // scrollable Column
     } // outer Column
 
@@ -1962,6 +1981,38 @@ private fun SettingsSection(title: String) {
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(start = 24.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
     )
+}
+
+/** A [SettingsSection] header that folds its [content] away (collapsed by default). */
+@Composable
+private fun CollapsibleSettingsSection(
+    title: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
+) {
+    androidx.compose.foundation.layout.Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(role = androidx.compose.ui.semantics.Role.Button) { onToggle() }
+            .padding(start = 24.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title.uppercase(),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+        )
+    }
+    if (expanded) {
+        androidx.compose.foundation.layout.Column(content = content)
+    }
 }
 
 @Composable
