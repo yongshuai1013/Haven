@@ -88,6 +88,36 @@ How it compares to alternatives:
 
 See [PRoot documentation](https://proot-me.github.io/) for technical details.
 
+## USB devices (to the agent and the Linux guest)
+
+On an unrooted Android phone, only an app holding the runtime USB permission can
+open a device — `/dev/bus/usb` is denied to both the proot guest and the adb
+shell. Haven turns that into a feature: it **brokers** the USB device through
+Android's `UsbManager` and re-exposes it two ways, with no root.
+
+- **To the agent (MCP):** `list_usb_devices`, `request_usb_permission`,
+  `usb_control_transfer`, and `usb_bulk_transfer` let an AI agent enumerate the
+  attached USB/OTG devices and run raw control/bulk transfers. Each device-open
+  and transfer asks for consent.
+- **To the Linux guest:** with **Settings → "Expose USB devices to the Linux
+  guest"** turned on (off by default), `usb_attach_to_guest` opens the device and
+  binds a small userspace USB proxy on a socket the proot can reach. A bundled
+  `haven-usb` shim then makes the device appear inside the guest as a normal
+  `/dev/hidraw*` HID node:
+  - **native Linux apps** via `LD_PRELOAD` (the shim interposes
+    `open`/`ioctl`/`read`/`write`);
+  - **Mono / .NET apps** (anything built on HidSharp) via a Mono **DllMap**
+    config — the shim fakes the `libudev` enumeration and a non-crashing hotplug
+    monitor and routes the HID I/O over the proxy. `usb_attach_to_guest` returns
+    the ready-to-use config to drop beside the app's `HidSharp.dll`.
+
+All USB I/O stays in the Android layer (`UsbDeviceConnection`), so the guest
+never needs a real device node or root. The shim is built for both glibc and
+musl, so it works the same on every distro Haven offers. The feature is
+HID/hidraw-focused today. This is the same pattern as the rest of Haven's bridge
+work: when the guest can't reach a capability directly, Haven brokers the
+Android privilege and re-exposes it (see [Vision](../VISION.md)).
+
 ## Reticulum
 
 Connect over [Reticulum](https://reticulum.network) mesh networks with native Kotlin transport (reticulum-kt + rnsh-kt). Two-way terminal sessions over IFAC-protected TCP gateways, announce-based rnsh node discovery via scan button, configurable IFAC network name and passphrase. No Python runtime or Chaquopy dependency — pure Kotlin implementation with Flow-based I/O.
