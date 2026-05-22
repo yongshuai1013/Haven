@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.CompletableDeferred
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
@@ -205,14 +207,25 @@ class AgentConsentManager @Inject constructor() {
             _pending.value = _pending.value + request
         }
 
-        val decision = withTimeoutOrNull(timeoutMs) { deferred.await() } ?: ConsentDecision.DENY
-
-        mutex.withLock {
-            pendingEntries.remove(id)
-            _pending.value = _pending.value.filterNot { it.id == id }
-            if (decision == ConsentDecision.ALLOW && level == ConsentLevel.ONCE_PER_SESSION) {
-                sessionAllowed.add(memoKey)
+        // The caller (McpServer) wraps this in its own withTimeoutOrNull, so a
+        // cancellation can hit us while suspended on the await below. The
+        // pending-entry teardown MUST run anyway — otherwise the request is
+        // orphaned in `_pending`, the consent sheet is never dismissed, and its
+        // buttons resolve a dead deferred (the "UI frozen after a consent
+        // timeout" bug). Hence finally + NonCancellable.
+        val decision = try {
+            withTimeoutOrNull(timeoutMs) { deferred.await() } ?: ConsentDecision.DENY
+        } finally {
+            withContext(NonCancellable) {
+                mutex.withLock {
+                    pendingEntries.remove(id)
+                    _pending.value = _pending.value.filterNot { it.id == id }
+                }
             }
+        }
+
+        if (decision == ConsentDecision.ALLOW && level == ConsentLevel.ONCE_PER_SESSION) {
+            mutex.withLock { sessionAllowed.add(memoKey) }
         }
         return decision
     }
@@ -254,14 +267,20 @@ class AgentConsentManager @Inject constructor() {
             _pending.value = _pending.value + request
         }
 
-        val raw = withTimeoutOrNull(timeoutMs) { deferred.await() }
+        // finally + NonCancellable: see requestConsent — an outer cancellation
+        // must not orphan the pending entry / leave the sheet stuck on screen.
+        val raw = try {
+            withTimeoutOrNull(timeoutMs) { deferred.await() }
+        } finally {
+            withContext(NonCancellable) {
+                mutex.withLock {
+                    pendingEntries.remove(id)
+                    _pending.value = _pending.value.filterNot { it.id == id }
+                }
+            }
+        }
         val decision = raw ?: ConsentDecision.DENY
         Log.i(LOG_TAG, "requestClientPairing('$clientName') id=$id resolved: ${if (raw == null) "TIMEOUT->DENY" else decision.toString()}")
-
-        mutex.withLock {
-            pendingEntries.remove(id)
-            _pending.value = _pending.value.filterNot { it.id == id }
-        }
         return decision
     }
 

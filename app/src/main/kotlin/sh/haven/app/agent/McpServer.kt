@@ -51,9 +51,12 @@ import kotlin.concurrent.thread
 private const val TAG = "McpServer"
 
 /** Max time to wait for the user to answer a consent prompt before returning a
- *  retryable error. Kept below the 10s socket timeout so the connection isn't
- *  dropped mid-wait. */
-private const val CONSENT_WAIT_MS: Long = 8_000L
+ *  retryable error. An interactive human needs time to notice the prompt,
+ *  switch to Haven and tap — 8s was unusable in practice. Held below the
+ *  socket read timeout (raised in lockstep below) so the connection isn't
+ *  dropped mid-wait. If the MCP client gives up sooner, [AgentConsentManager]
+ *  clears the orphaned prompt in a finally block so the sheet never sticks. */
+private const val CONSENT_WAIT_MS: Long = 55_000L
 
 /** Backoff between WireGuard (re)bind attempts when no tunnel is up yet
  *  or the listener dropped (roam re-handshake, tunnel released). */
@@ -472,7 +475,9 @@ class McpServer @Inject constructor(
 
     private fun handleClient(socket: Socket) {
         try {
-            socket.soTimeout = 10_000
+            // Read timeout. Must exceed CONSENT_WAIT_MS so a request blocked on
+            // an interactive consent prompt isn't dropped mid-wait.
+            socket.soTimeout = 70_000
             socket.use { s -> handleConnection(s.getInputStream(), s.getOutputStream()) }
         } catch (e: Exception) {
             Log.w(TAG, "client handler error: ${e.message}")
