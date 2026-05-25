@@ -9,6 +9,7 @@ enum class ToolbarKey(val id: String, val label: String, val isModifier: Boolean
     KEYBOARD("keyboard", "Keyboard", isAction = true),
     ESC_KEY("esc", "Esc", isAction = true),
     TAB_KEY("tab", "Tab", isAction = true),
+    ENTER_KEY("enter", "Enter", isAction = true),
     PASTE("paste", "Paste", isAction = true),
     SNIPPETS("snippets", "Snippets", isAction = true),
     ATTACH("attach", "Attach", isAction = true),

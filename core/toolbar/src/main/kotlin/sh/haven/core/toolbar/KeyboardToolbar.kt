@@ -98,6 +98,10 @@ import kotlin.math.roundToInt
 private const val ESC = "\u001b"
 private val KEY_ESC = byteArrayOf(0x1b)
 private val KEY_TAB = byteArrayOf(0x09)
+// Carriage return — what the physical Enter key sends; the tty line
+// discipline maps it to newline. Lets the user submit a command (e.g. after
+// recalling it with the Up-arrow key) without raising the soft keyboard (#184).
+private val KEY_ENTER = byteArrayOf(0x0d)
 private val KEY_SHIFT_TAB = "$ESC[Z".toByteArray()
 private val KEY_HOME = "$ESC[H".toByteArray()
 private val KEY_END = "$ESC[F".toByteArray()
@@ -751,6 +755,7 @@ private fun BuiltInKey(
             }
         }
         ToolbarKey.ESC_KEY -> ToolbarTextButton("Esc") { cb.onSendBytes(KEY_ESC) }
+        ToolbarKey.ENTER_KEY -> ToolbarTextButton("⏎") { cb.onSendBytes(KEY_ENTER) }
         ToolbarKey.TAB_KEY -> ToolbarTextButton("Tab") {
             if (shiftActive) {
                 cb.onSendBytes(KEY_SHIFT_TAB)
