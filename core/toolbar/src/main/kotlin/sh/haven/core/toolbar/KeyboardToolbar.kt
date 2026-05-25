@@ -755,7 +755,9 @@ private fun BuiltInKey(
             }
         }
         ToolbarKey.ESC_KEY -> ToolbarTextButton("Esc") { cb.onSendBytes(KEY_ESC) }
-        ToolbarKey.ENTER_KEY -> ToolbarTextButton("⏎") { cb.onSendBytes(KEY_ENTER) }
+        // Rendered with the larger, bold glyph style the arrow keys use (16sp
+        // vs the 11sp text buttons) so the return symbol is clearly legible (#184).
+        ToolbarKey.ENTER_KEY -> ToolbarArrowButton("⏎") { cb.onSendBytes(KEY_ENTER) }
         ToolbarKey.TAB_KEY -> ToolbarTextButton("Tab") {
             if (shiftActive) {
                 cb.onSendBytes(KEY_SHIFT_TAB)
