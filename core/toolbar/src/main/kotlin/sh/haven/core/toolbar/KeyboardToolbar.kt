@@ -422,35 +422,39 @@ private fun AlignedToolbarContent(
             .horizontalScroll(rememberScrollState())
             .padding(horizontal = 4.dp),
     ) {
-        // Left keys column — uses IntrinsicSize.Max so both rows have equal width
-        Column(modifier = Modifier.width(IntrinsicSize.Max)) {
-            KeyRow(Modifier.fillMaxWidth()) {
-                // Col 1: keyboard toggle (or placeholder to hold the column).
-                if (r1Keyboard != null) {
-                    RenderItem(r1Keyboard, focusRequester, ctrlActive, altActive,
-                        shiftActive, imeVisible, view)
-                } else {
-                    Spacer(Modifier.size(32.dp))
-                }
-                // Col 2: Attach (pinned).
-                if (r1Attach != null) {
-                    RenderItem(r1Attach, focusRequester, ctrlActive, altActive,
-                        shiftActive, imeVisible, view)
-                } else {
-                    Spacer(Modifier.size(32.dp))
-                }
-                for (item in r1Rest) {
-                    RenderItem(item, focusRequester, ctrlActive, altActive,
-                        shiftActive, imeVisible, view)
-                }
+        // Left keys, column-aligned: each column stacks its row-1 key over its
+        // row-2 key in a Column sized to the wider of the two (IntrinsicSize.Max),
+        // so the two rows line up in tidy columns at minimum width — no 58dp
+        // pills, no misaligned rows (#184 follow-up).
+        @Composable
+        fun KeyCell(content: (@Composable () -> Unit)?) {
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (content != null) content() else Spacer(Modifier.size(32.dp))
             }
-            KeyRow(Modifier.fillMaxWidth()) {
-                // Col 1: VNC Desktop icon (or placeholder so Voice stays at col 2).
-                if (onVncTap != null) {
+        }
+        @Composable
+        fun KeyColumn(top: (@Composable () -> Unit)?, bottom: (@Composable () -> Unit)?) {
+            Column(modifier = Modifier.width(IntrinsicSize.Max)) {
+                KeyCell(top)
+                KeyCell(bottom)
+            }
+        }
+        fun itemRenderer(item: ToolbarItem?): (@Composable () -> Unit)? = item?.let {
+            { RenderItem(it, focusRequester, ctrlActive, altActive, shiftActive, imeVisible, view) }
+        }
+
+        // Col 0: keyboard toggle (top) / VNC-desktop icon (bottom).
+        KeyColumn(
+            top = itemRenderer(r1Keyboard),
+            bottom = if (onVncTap != null) {
+                {
                     if (vncLoading) {
-                        androidx.compose.foundation.layout.Box(
+                        Box(
                             modifier = Modifier.size(32.dp),
-                            contentAlignment = androidx.compose.ui.Alignment.Center,
+                            contentAlignment = Alignment.Center,
                         ) {
                             androidx.compose.material3.CircularProgressIndicator(
                                 modifier = Modifier.size(18.dp),
@@ -460,21 +464,17 @@ private fun AlignedToolbarContent(
                     } else {
                         ToolbarIconButton(Icons.Filled.DesktopWindows, stringResource(R.string.toolbar_vnc_desktop), onVncTap)
                     }
-                } else {
-                    Spacer(Modifier.size(32.dp))
                 }
-                // Col 2: Voice / secure-keyboard toggle (pinned, stacks under Attach).
-                if (r2Voice != null) {
-                    RenderItem(r2Voice, focusRequester, ctrlActive, altActive,
-                        shiftActive, imeVisible, view)
-                } else {
-                    Spacer(Modifier.size(32.dp))
-                }
-                for (item in r2Rest) {
-                    RenderItem(item, focusRequester, ctrlActive, altActive,
-                        shiftActive, imeVisible, view)
-                }
-            }
+            } else {
+                null
+            },
+        )
+        // Col 1: Attach (top) / Voice toggle (bottom).
+        KeyColumn(top = itemRenderer(r1Attach), bottom = itemRenderer(r2Voice))
+        // Remaining columns: row-1 key over row-2 key, paired by position.
+        val restColumns = maxOf(r1Rest.size, r2Rest.size)
+        for (i in 0 until restColumns) {
+            KeyColumn(top = itemRenderer(r1Rest.getOrNull(i)), bottom = itemRenderer(r2Rest.getOrNull(i)))
         }
 
         // Nav block grid — fixed-width cells ensure vertical alignment
