@@ -75,6 +75,18 @@ class AgentPresentationManager @Inject constructor() {
     /** All currently-showing media, oldest first. Drives the presentation host. */
     val pending: StateFlow<List<PresentedMedia>> = _pending.asStateFlow()
 
+    private val _minimizedIds = MutableStateFlow<Set<Long>>(emptySet())
+    /**
+     * Ids of [PresentedMediaKind.APP_WINDOW] entries the user has backgrounded
+     * to an edge icon. They stay in [pending] (the cage + VNC keep running) but
+     * the host skips rendering them; the edge dock renders an icon per id.
+     * Only ever holds app-window ids — image/audio are never minimized.
+     *
+     * Invariant: at most one app window is *non*-minimized at a time (the one
+     * shown full-overlay). [presentAppWindow] and [restore] enforce it.
+     */
+    val minimizedIds: StateFlow<Set<Long>> = _minimizedIds.asStateFlow()
+
     /**
      * Enqueue [filePath] for the user to see/hear. Non-blocking; returns
      * the assigned id so a caller could correlate a later [dismiss] if it
@@ -108,16 +120,46 @@ class AgentPresentationManager @Inject constructor() {
         port: Int,
         sessionId: String,
         caption: String?,
-    ): Long = enqueue(
-        PresentedMedia(
-            id = nextId.getAndIncrement(),
-            kind = PresentedMediaKind.APP_WINDOW,
-            caption = caption,
-            host = host,
-            port = port,
-            sessionId = sessionId,
-        ),
-    )
+    ): Long {
+        // Auto-background the currently-focused app window so the new one takes
+        // the single full-overlay slot; the previous one becomes an edge icon.
+        currentFocusedAppWindowId()?.let { _minimizedIds.value = _minimizedIds.value + it }
+        return enqueue(
+            PresentedMedia(
+                id = nextId.getAndIncrement(),
+                kind = PresentedMediaKind.APP_WINDOW,
+                caption = caption,
+                host = host,
+                port = port,
+                sessionId = sessionId,
+            ),
+        )
+    }
+
+    /** The id of the app window currently shown full-overlay, or null. */
+    private fun currentFocusedAppWindowId(): Long? =
+        _pending.value.firstOrNull {
+            it.kind == PresentedMediaKind.APP_WINDOW && it.id !in _minimizedIds.value
+        }?.id
+
+    /** Background an app window to an edge icon (keeps the cage + VNC alive). */
+    fun minimize(id: Long) {
+        _minimizedIds.value = _minimizedIds.value + id
+    }
+
+    /**
+     * Restore a backgrounded app window to the full overlay. Backgrounds the
+     * current focused window first (single-focus invariant), then un-minimizes
+     * [id] and moves it to the front of [pending] so the host renders it.
+     */
+    fun restore(id: Long) {
+        currentFocusedAppWindowId()?.let { focused ->
+            if (focused != id) _minimizedIds.value = _minimizedIds.value + focused
+        }
+        _minimizedIds.value = _minimizedIds.value - id
+        val item = _pending.value.firstOrNull { it.id == id } ?: return
+        _pending.value = listOf(item) + _pending.value.filterNot { it.id == id }
+    }
 
     private fun enqueue(item: PresentedMedia): Long {
         val next = _pending.value + item
@@ -144,6 +186,7 @@ class AgentPresentationManager @Inject constructor() {
         val current = _pending.value
         val item = current.firstOrNull { it.id == id }
         _pending.value = current.filterNot { it.id == id }
+        _minimizedIds.value = _minimizedIds.value - id
         item?.filePath?.let { runCatching { File(it).delete() } }
     }
 

@@ -872,6 +872,31 @@ class UserPreferencesRepository @Inject constructor(
         }
     }
 
+    /**
+     * Edit an existing entry's [label] and [command] in place, keyed by [id].
+     * Unlike [upsertAppWindowDef] (which matches by command and so can't change
+     * one), this targets the id, so the user can rename both fields. The
+     * entry's [AppWindowOrigin] is preserved; [lastUsed] is refreshed. No-op
+     * if no entry has that id.
+     */
+    suspend fun updateAppWindowDef(id: String, label: String, command: String) {
+        dataStore.edit { prefs ->
+            val current = prefs[appWindowDefsKey]?.let { AppWindowDefList.fromJson(it) }
+                ?: AppWindowDefList.EMPTY
+            val now = System.currentTimeMillis()
+            val items = current.items.map {
+                if (it.id == id) {
+                    it.copy(
+                        label = label.ifBlank { command },
+                        command = command,
+                        lastUsed = now,
+                    )
+                } else it
+            }
+            prefs[appWindowDefsKey] = AppWindowDefList(items).toJson()
+        }
+    }
+
     val navBlockMode: Flow<NavBlockMode> = dataStore.data.map { prefs ->
         prefs[navBlockModeKey]?.let { NavBlockMode.fromId(it) } ?: NavBlockMode.ALIGNED
     }

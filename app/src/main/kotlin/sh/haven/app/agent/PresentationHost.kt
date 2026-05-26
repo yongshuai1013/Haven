@@ -69,6 +69,13 @@ internal class PresentationHostViewModel @Inject constructor(
     private val pipController: PipController,
 ) : ViewModel() {
     val pending: StateFlow<List<PresentedMedia>> = manager.pending
+    val minimizedIds: StateFlow<Set<Long>> = manager.minimizedIds
+
+    /** Background an app window to an edge icon (keeps the cage + VNC alive). */
+    fun minimize(id: Long) = manager.minimize(id)
+
+    /** Restore a backgrounded app window to the full overlay. */
+    fun restore(id: Long) = manager.restore(id)
 
     /**
      * The live VNC controller for an app window, owned by the store (so it
@@ -125,7 +132,10 @@ internal class PresentationHostViewModel @Inject constructor(
 @Composable
 internal fun PresentationHost(viewModel: PresentationHostViewModel = hiltViewModel()) {
     val pending by viewModel.pending.collectAsStateWithLifecycle()
-    val upstream = pending.firstOrNull()
+    val minimized by viewModel.minimizedIds.collectAsStateWithLifecycle()
+    // Render the focused item: the oldest pending one that isn't backgrounded.
+    // Minimized app windows stay live (edge icons) but are skipped here.
+    val upstream = pending.firstOrNull { it.id !in minimized }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -148,7 +158,18 @@ internal fun PresentationHost(viewModel: PresentationHostViewModel = hiltViewMod
     val current = displayed ?: return
 
     ModalBottomSheet(
-        onDismissRequest = { viewModel.dismiss(current) },
+        // Tap-outside / swipe-away: for a running app window this *backgrounds*
+        // it (keeps the cage + VNC alive, docks an edge icon) rather than
+        // tearing it down — only the explicit Dismiss button / edge-icon ✕
+        // kill the cage. Images/audio have nothing to keep alive, so they
+        // dismiss as before.
+        onDismissRequest = {
+            if (current.kind == PresentedMediaKind.APP_WINDOW) {
+                viewModel.minimize(current.id)
+            } else {
+                viewModel.dismiss(current)
+            }
+        },
         sheetState = sheetState,
     ) {
         Column(
@@ -167,28 +188,38 @@ internal fun PresentationHost(viewModel: PresentationHostViewModel = hiltViewMod
                 PresentedMediaKind.APP_WINDOW -> {
                     val controller = viewModel.controllerFor(current)
                     if (controller != null) {
-                        AppWindowContent(controller, onDismiss = { viewModel.dismiss(current) })
+                        val context = LocalContext.current
+                        AppWindowContent(
+                            controller = controller,
+                            // Close (in the viewer's own toolbar) tears the cage
+                            // down; minimize backgrounds it to an edge icon
+                            // (keeps it alive); PiP enters system PiP. All three
+                            // live in the viewer's existing control row — no
+                            // second button row here.
+                            onDismiss = { viewModel.dismiss(current) },
+                            onMinimize = { viewModel.minimize(current.id) },
+                            onPictureInPicture = {
+                                (context.findActivity() as? MainActivity)?.enterPipForAppWindow()
+                            },
+                        )
                     } else {
                         Text("App window is missing its connection details.")
                     }
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
-            ) {
-                if (current.kind == PresentedMediaKind.APP_WINDOW) {
-                    val context = LocalContext.current
-                    OutlinedButton(onClick = {
-                        (context.findActivity() as? MainActivity)?.enterPipForAppWindow()
-                    }) {
-                        Text("PiP")
+            // Image/audio need a Dismiss button; an app window carries its own
+            // control row (close / minimize / PiP / keyboard / fullscreen)
+            // inside the VNC viewer, so it doesn't add a second row here.
+            if (current.kind != PresentedMediaKind.APP_WINDOW) {
+                Spacer(Modifier.height(24.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
+                ) {
+                    Button(onClick = { viewModel.dismiss(current) }) {
+                        Text("Dismiss")
                     }
-                }
-                Button(onClick = { viewModel.dismiss(current) }) {
-                    Text("Dismiss")
                 }
             }
             Spacer(Modifier.height(16.dp))
@@ -302,7 +333,12 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
  * toggle promotes it. [onDismiss] tears the window down.
  */
 @Composable
-private fun AppWindowContent(controller: AppWindowVncController, onDismiss: () -> Unit) {
+private fun AppWindowContent(
+    controller: AppWindowVncController,
+    onDismiss: () -> Unit,
+    onMinimize: () -> Unit,
+    onPictureInPicture: () -> Unit,
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -324,6 +360,10 @@ private fun AppWindowContent(controller: AppWindowVncController, onDismiss: () -
             onKeyDown = { sym -> controller.key(sym, true) },
             onKeyUp = { sym -> controller.key(sym, false) },
             onDisconnect = onDismiss,
+            // The viewer's own toolbar gains a minimize + PiP button for app
+            // windows (null for full desktops, which don't show them).
+            onMinimize = onMinimize,
+            onPictureInPicture = onPictureInPicture,
             // App windows expect ordinary 2-finger pinch-to-zoom (the desktop
             // viewer reserves 2 fingers for remote scroll, zoom on 3).
             twoFingerZoom = true,

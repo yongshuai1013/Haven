@@ -413,6 +413,10 @@ class DesktopViewModel @Inject constructor(
         viewModelScope.launch { preferencesRepository.deleteAppWindowDef(id) }
     }
 
+    fun updateAppWindow(id: String, label: String, command: String) {
+        viewModelScope.launch { preferencesRepository.updateAppWindowDef(id, label, command) }
+    }
+
     /**
      * Open an in-app VNC viewer for any running desktop that doesn't have
      * one yet. A desktop started outside the UI start path — notably via

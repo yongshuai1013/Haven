@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DesktopWindows
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
@@ -97,6 +98,8 @@ fun DesktopManagerScreen(viewModel: DesktopViewModel = hiltViewModel()) {
         mutableStateOf<ProotManager.DesktopEnvironment?>(null)
     }
     var showAddAppDialog by remember { mutableStateOf(false) }
+    // Non-null while the edit dialog is open, holding the def being edited.
+    var editingApp by remember { mutableStateOf<AppWindowDef?>(null) }
     val appWindowDefs by viewModel.appWindowDefs.collectAsState()
     val launchingIds by viewModel.launchingIds.collectAsState()
 
@@ -130,18 +133,31 @@ fun DesktopManagerScreen(viewModel: DesktopViewModel = hiltViewModel()) {
             defs = appWindowDefs,
             launchingIds = launchingIds,
             onLaunch = { viewModel.launchAppWindow(it) },
+            onEdit = { editingApp = it },
             onDelete = { viewModel.deleteAppWindow(it.id) },
             onAdd = { showAddAppDialog = true },
         )
     }
 
     if (showAddAppDialog) {
-        AddAppWindowDialog(
-            onAdd = { label, command ->
+        AppWindowDialog(
+            initial = null,
+            onSave = { label, command ->
                 viewModel.addAppWindow(label, command)
                 showAddAppDialog = false
             },
             onDismiss = { showAddAppDialog = false },
+        )
+    }
+
+    editingApp?.let { def ->
+        AppWindowDialog(
+            initial = def,
+            onSave = { label, command ->
+                viewModel.updateAppWindow(def.id, label, command)
+                editingApp = null
+            },
+            onDismiss = { editingApp = null },
         )
     }
 
@@ -181,6 +197,7 @@ private fun AppWindowsSection(
     defs: List<AppWindowDef>,
     launchingIds: Set<String>,
     onLaunch: (AppWindowDef) -> Unit,
+    onEdit: (AppWindowDef) -> Unit,
     onDelete: (AppWindowDef) -> Unit,
     onAdd: () -> Unit,
 ) {
@@ -240,6 +257,9 @@ private fun AppWindowsSection(
                                 Icon(Icons.Filled.PlayArrow, contentDescription = "Launch ${def.label}")
                             }
                         }
+                        IconButton(onClick = { onEdit(def) }) {
+                            Icon(Icons.Filled.Edit, contentDescription = "Edit ${def.label}")
+                        }
                         IconButton(onClick = { onDelete(def) }) {
                             Icon(Icons.Filled.Delete, contentDescription = "Delete ${def.label}")
                         }
@@ -253,16 +273,22 @@ private fun AppWindowsSection(
     }
 }
 
+/**
+ * Add (when [initial] is null) or edit an app-window definition. Prefills
+ * from [initial] when editing; [onSave] gets the trimmed label + command.
+ */
 @Composable
-private fun AddAppWindowDialog(
-    onAdd: (label: String, command: String) -> Unit,
+private fun AppWindowDialog(
+    initial: AppWindowDef?,
+    onSave: (label: String, command: String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var label by remember { mutableStateOf("") }
-    var command by remember { mutableStateOf("") }
+    var label by remember { mutableStateOf(initial?.label ?: "") }
+    var command by remember { mutableStateOf(initial?.command ?: "") }
+    val editing = initial != null
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add app window") },
+        title = { Text(if (editing) "Edit app window" else "Add app window") },
         text = {
             Column {
                 OutlinedTextField(
@@ -286,9 +312,9 @@ private fun AddAppWindowDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onAdd(label.trim(), command.trim()) },
+                onClick = { onSave(label.trim(), command.trim()) },
                 enabled = command.isNotBlank(),
-            ) { Text("Add") }
+            ) { Text(if (editing) "Save" else "Add") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }

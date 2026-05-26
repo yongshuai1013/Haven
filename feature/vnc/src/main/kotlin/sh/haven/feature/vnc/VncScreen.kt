@@ -43,6 +43,8 @@ import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.KeyboardHide
+import androidx.compose.material.icons.filled.Minimize
+import androidx.compose.material.icons.filled.PictureInPictureAlt
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.ScreenLockLandscape
 import androidx.compose.material.icons.filled.ScreenLockPortrait
@@ -146,6 +148,13 @@ fun VncSessionContent(
     onCycleOrientation: () -> Unit = {},
     onRetry: (() -> Unit)? = null,
     onClose: (() -> Unit)? = null,
+    /**
+     * App-window-only toolbar actions. When non-null the bottom toolbar shows a
+     * minimize (background to edge icon) and/or a Picture-in-Picture button.
+     * Full desktops leave these null and don't show them.
+     */
+    onMinimize: (() -> Unit)? = null,
+    onPictureInPicture: (() -> Unit)? = null,
     /** See [VncViewer]: 2-finger pinch-zoom for single-app windows. */
     twoFingerZoom: Boolean = false,
 ) {
@@ -213,6 +222,8 @@ fun VncSessionContent(
             onDismissBandwidthSuggestion = onDismissBandwidthSuggestion,
             currentOrientation = currentOrientation,
             onCycleOrientation = onCycleOrientation,
+            onMinimize = onMinimize,
+            onPictureInPicture = onPictureInPicture,
             twoFingerZoom = twoFingerZoom,
         )
     } else {
@@ -385,6 +396,8 @@ private fun VncViewer(
     onDismissBandwidthSuggestion: (() -> Unit)? = null,
     currentOrientation: Int = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE,
     onCycleOrientation: () -> Unit = {},
+    onMinimize: (() -> Unit)? = null,
+    onPictureInPicture: (() -> Unit)? = null,
     /**
      * Local-viewport zoom/pan on TWO fingers instead of the default three.
      * For single-app windows (present_app) where users expect ordinary
@@ -936,6 +949,19 @@ private fun VncViewer(
 
                 IconButton(onClick = onCycleOrientation) {
                     Icon(orientationMode.icon, contentDescription = orientationMode.description)
+                }
+
+                // App-window-only: background to an edge icon (keeps it alive).
+                onMinimize?.let { minimize ->
+                    IconButton(onClick = minimize) {
+                        Icon(Icons.Default.Minimize, contentDescription = "Background to edge icon")
+                    }
+                }
+                // App-window-only: enter system Picture-in-Picture.
+                onPictureInPicture?.let { pip ->
+                    IconButton(onClick = pip) {
+                        Icon(Icons.Default.PictureInPictureAlt, contentDescription = "Picture-in-picture")
+                    }
                 }
 
                 Spacer(Modifier.weight(1f))

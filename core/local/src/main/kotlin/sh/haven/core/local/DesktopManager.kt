@@ -69,6 +69,10 @@ class DesktopManager @Inject constructor(
         killAllOrphanedXvnc()
     }
 
+    // Synchronized: concurrent app windows (multiple cages) can call
+    // allocate/release at once, and a racing read-then-add on the plain
+    // mutableSet could hand two sessions the same display → same VNC port.
+    @Synchronized
     private fun allocateDisplay(): Int {
         var display = 1
         while (display in usedDisplays) display++
@@ -76,6 +80,7 @@ class DesktopManager @Inject constructor(
         return display
     }
 
+    @Synchronized
     private fun releaseDisplay(display: Int) {
         usedDisplays.remove(display)
     }
@@ -784,12 +789,12 @@ class DesktopManager @Inject constructor(
      * connections — state RUNNING — or the launch fails / times out — state
      * ERROR — then returns the session.
      *
-     * v1 runs one app window at a time: any existing window is stopped first.
-     * (The overlay shows one window; concurrent windows + per-session teardown
-     * are a later enhancement — see [stopAppWindow]'s name-based kill.)
+     * Multiple windows run concurrently: each gets its own display (so its own
+     * per-display `XDG_RUNTIME_DIR`/wayland socket and `5900+display` VNC port)
+     * and is torn down independently by [stopAppWindow]. The UI keeps one
+     * focused in the overlay and the rest docked as edge icons.
      */
     fun startAppWindow(command: String, timeoutMs: Long = 15_000): AppWindowSession {
-        _appWindows.value.keys.toList().forEach { stopAppWindow(it) }
 
         val sessionId = "appwin-${System.currentTimeMillis()}"
         val display = allocateDisplay()
@@ -861,18 +866,53 @@ class DesktopManager @Inject constructor(
         appWindowProcesses[sessionId]?.destroyForcibly()
         appWindowProcesses.remove(sessionId)
         // destroyForcibly only kills the proot launch shell (now wayvnc);
-        // cage + the app become orphans. Sweep the cage tree. NOTE v1: this
-        // is name-based (also sweeps wayvnc/foot), so don't run an app window
-        // concurrently with a nested-Wayland *desktop* — acceptable while
-        // app windows are single-instance and not mixed with a Sway desktop.
-        killOrphanedNestedWayland("cage")
-        // The kiosk app (e.g. imv/mpv) does NOT always exit when cage dies,
-        // and the sweep above only covers the compositor + its standard
-        // children — so also kill the app binary by name.
-        val appBinary = session.command.trim().substringBefore(' ').substringAfterLast('/')
-        if (appBinary.isNotEmpty()) killOrphanedNestedWayland(appBinary)
+        // cage + the app become orphans. Sweep them PER SESSION (not by name)
+        // so concurrent app windows — and a nested-Wayland desktop — survive:
+        // every process in this session's cage tree carries this session's
+        // unique XDG_RUNTIME_DIR (/tmp/xdg-runtime-<display>) in its environ.
+        killAppWindowSession(session.displayNumber)
         releaseDisplay(session.displayNumber)
         _appWindows.update { it - sessionId }
+    }
+
+    /**
+     * Kill exactly the cage-kiosk process tree for one app window, identified
+     * by its per-session XDG_RUNTIME_DIR (/tmp/xdg-runtime-[display]). cage,
+     * the kiosk app, and wayvnc are all exec'd with that env var exported, so
+     * an exact match on it scopes the kill to this session and leaves other
+     * concurrent app windows (and any nested-Wayland desktop) untouched —
+     * unlike the name-based [killOrphanedNestedWayland].
+     */
+    private fun killAppWindowSession(display: Int) {
+        val xdg = "/tmp/xdg-runtime-$display"
+        // environ is NUL-separated; tr → newlines, then exact-line match on the
+        // full var so display 1 doesn't also match display 11.
+        val scanScript = """
+            for p in /proc/[0-9]*; do
+                [ -r ${'$'}p/environ ] || continue
+                if tr '\0' '\n' < ${'$'}p/environ 2>/dev/null | grep -qx "XDG_RUNTIME_DIR=$xdg"; then
+                    echo "${'$'}{p##*/}"
+                fi
+            done
+        """.trimIndent()
+        try {
+            val proc = ProcessBuilder("sh", "-c", scanScript)
+                .redirectErrorStream(true).start()
+            val pids = proc.inputStream.bufferedReader().readText().trim()
+            proc.waitFor()
+            if (pids.isNotEmpty()) {
+                Log.d(TAG, "Killing app-window session (display $display): ${pids.replace('\n', ' ')}")
+                for (pid in pids.lines()) {
+                    try {
+                        ProcessBuilder("kill", "-9", pid.trim()).start().waitFor()
+                    } catch (_: Exception) {}
+                }
+            } else {
+                Log.d(TAG, "No app-window processes for display $display")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "killAppWindowSession($display) failed: ${e.message}")
+        }
     }
 
     /** Compositor log for an app-window session (grey-screen diagnostics). */

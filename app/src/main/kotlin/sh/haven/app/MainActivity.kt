@@ -324,6 +324,9 @@ class MainActivity : AppCompatActivity() {
                     // Same top-of-tree pattern: an agent-pushed image or
                     // sound (present_media) floats over the active screen.
                     sh.haven.app.agent.PresentationHost()
+                    // Backgrounded app windows dock here as draggable edge
+                    // icons; tap restores one to the PresentationHost overlay.
+                    sh.haven.app.agent.EdgeIconDock()
                     // Same pattern for BIOMETRIC_PROTECTED keystore
                     // fetches — the gate publishes; this host renders
                     // BiometricPrompt; the result resumes the
