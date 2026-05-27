@@ -94,6 +94,16 @@ class AppWindowVncController {
         scope.launch { client?.updateMouseButton(1, false) }
     }
 
+    /** Hold/release an arbitrary mouse button (1=L, 2=M, 3=R) for the
+     *  toolbar's explicit mouse-button toggles (#183). */
+    fun pressButton(button: Int) {
+        scope.launch { client?.updateMouseButton(button, true) }
+    }
+
+    fun releaseButton(button: Int) {
+        scope.launch { client?.updateMouseButton(button, false) }
+    }
+
     fun scroll(up: Boolean) {
         scope.launch { client?.click(if (up) 4 else 5) }
     }

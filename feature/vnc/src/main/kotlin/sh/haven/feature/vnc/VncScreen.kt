@@ -54,6 +54,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.FilledIconToggleButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.FilledTonalButton
@@ -132,6 +133,10 @@ fun VncSessionContent(
     onDragEnd: () -> Unit,
     onScrollUp: () -> Unit,
     onScrollDown: () -> Unit,
+    /** Hold/release a mouse button (1=L, 2=M, 3=R) for the toolbar's
+     *  explicit mouse-button toggles (#183). Default no-op. */
+    onPressButton: (Int) -> Unit = {},
+    onReleaseButton: (Int) -> Unit = {},
     onTypeChar: (Char) -> Unit,
     onTypeText: (String) -> Unit = { s -> s.forEach(onTypeChar) },
     onKeyDown: (keySym: Int) -> Unit,
@@ -208,6 +213,8 @@ fun VncSessionContent(
             onDragEnd = onDragEnd,
             onScrollUp = onScrollUp,
             onScrollDown = onScrollDown,
+            onPressButton = onPressButton,
+            onReleaseButton = onReleaseButton,
             onTypeChar = onTypeChar,
             onTypeText = onTypeText,
             onKeyDown = onKeyDown,
@@ -303,6 +310,8 @@ fun VncScreen(
         onDragEnd = { viewModel.releaseButton(1) },
         onScrollUp = { viewModel.scrollUp() },
         onScrollDown = { viewModel.scrollDown() },
+        onPressButton = { btn -> viewModel.pressButton(btn) },
+        onReleaseButton = { btn -> viewModel.releaseButton(btn) },
         onTypeChar = { ch -> viewModel.typeKey(charToKeySym(ch)) },
         onTypeText = { text -> viewModel.typeText(text) },
         onKeyDown = { keySym -> viewModel.sendKey(keySym, true) },
@@ -314,6 +323,26 @@ fun VncScreen(
         currentOrientation = orientationValue,
         onCycleOrientation = { orientationValue = cycleVncOrientation(orientationValue) },
     )
+}
+
+/**
+ * Explicit mouse-button toggles (L / M / R) for the VNC toolbar (#183).
+ * Each is a sticky hold: tapping arms that button down on the remote so a
+ * finger drag moves with it held; tapping again releases. Mutually exclusive.
+ * Lets the user move the pointer with no button pressed, or hold any button
+ * and drag — the "use real mouse buttons like SSH" request.
+ */
+@Composable
+private fun MouseButtonToggles(held: Int?, onToggle: (Int) -> Unit) {
+    listOf(1 to "L", 2 to "M", 3 to "R").forEach { (btn, label) ->
+        FilledIconToggleButton(
+            checked = held == btn,
+            onCheckedChange = { onToggle(btn) },
+            modifier = Modifier.size(40.dp),
+        ) {
+            Text(label, style = MaterialTheme.typography.labelLarge)
+        }
+    }
 }
 
 @Composable
@@ -382,6 +411,8 @@ private fun VncViewer(
     onDragEnd: () -> Unit,
     onScrollUp: () -> Unit,
     onScrollDown: () -> Unit,
+    onPressButton: (Int) -> Unit = {},
+    onReleaseButton: (Int) -> Unit = {},
     onTypeChar: (Char) -> Unit,
     onTypeText: (String) -> Unit = { s -> s.forEach(onTypeChar) },
     onKeyDown: (Int) -> Unit,
@@ -463,6 +494,31 @@ private fun VncViewer(
 
     // Fullscreen overlay toolbar
     var overlayVisible by remember { mutableStateOf(false) }
+
+    // Explicit mouse-button hold (#183): when non-null (1=L, 2=M, 3=R) that
+    // button is held down on the remote, so finger movement drags with it
+    // held instead of the implicit button-1-on-drag. Lets the user move the
+    // cursor with no button pressed (no toggle) or hold any button and drag —
+    // most natural in TOUCHPAD mode where movement doesn't imply a press.
+    // Mutually exclusive: toggling one releases any other. Read live inside
+    // the gesture loop, so it isn't a pointerInput key.
+    var heldButton by remember { mutableStateOf<Int?>(null) }
+    val toggleHeldButton: (Int) -> Unit = { btn ->
+        val current = heldButton
+        when (current) {
+            btn -> { onReleaseButton(btn); heldButton = null }
+            else -> {
+                if (current != null) onReleaseButton(current)
+                onPressButton(btn)
+                heldButton = btn
+            }
+        }
+    }
+    // Release a held button if the viewer leaves composition with one engaged,
+    // so the remote isn't left with a stuck button.
+    DisposableEffect(Unit) {
+        onDispose { heldButton?.let(onReleaseButton) }
+    }
 
     // Virtual cursor position for TOUCHPAD mode. Hoisted to composable
     // scope so it persists across gesture lifts — Nesos-ita reported on
@@ -579,7 +635,7 @@ private fun VncViewer(
                                 // AND isn't a follow-up to a recent tap (in which
                                 // case we want to allow the user to start a drag
                                 // with button 1, not get a phantom right-click).
-                                if (totalFingers == 1 && !longPressFired && !dragging && totalMovement < touchSlopPx && !isFollowUpTouch) {
+                                if (totalFingers == 1 && !longPressFired && !dragging && totalMovement < touchSlopPx && !isFollowUpTouch && heldButton == null) {
                                     val (vx, vy) = if (inputMode == "TOUCHPAD") {
                                         virtualCursor
                                     } else {
@@ -718,11 +774,17 @@ private fun VncViewer(
                                         .coerceIn(0, frame.height - 1)
                                     virtualCursor = nx to ny
                                     if (!longPressFired && totalMovement >= touchSlopPx) {
-                                        if (isFollowUpTouch && !dragButtonPressed) {
-                                            onDragStart(nx, ny)
-                                            dragButtonPressed = true
-                                        } else {
-                                            onDrag(nx, ny)
+                                        when {
+                                            // A toolbar button is held — just move
+                                            // the pointer; the held button rides
+                                            // along in the mask, so this drags
+                                            // with that button (#183).
+                                            heldButton != null -> onDrag(nx, ny)
+                                            isFollowUpTouch && !dragButtonPressed -> {
+                                                onDragStart(nx, ny)
+                                                dragButtonPressed = true
+                                            }
+                                            else -> onDrag(nx, ny)
                                         }
                                     }
                                 } else {
@@ -731,12 +793,17 @@ private fun VncViewer(
                                         frame.width, frame.height,
                                         zoom, panX, panY,
                                     )
-                                    // Start drag (button 1 press) once movement exceeds touch slop
-                                    if (!longPressFired && !dragging && totalMovement >= touchSlopPx) {
-                                        onDragStart(pos.first, pos.second)
-                                        dragging = true
-                                    } else if (dragging) {
-                                        onDrag(pos.first, pos.second)
+                                    when {
+                                        // Held toolbar button: move only (no
+                                        // implicit button-1 press), so the drag
+                                        // uses the held button instead (#183).
+                                        heldButton != null -> onDrag(pos.first, pos.second)
+                                        // Start drag (button 1 press) once movement exceeds touch slop
+                                        !longPressFired && !dragging && totalMovement >= touchSlopPx -> {
+                                            onDragStart(pos.first, pos.second)
+                                            dragging = true
+                                        }
+                                        dragging -> onDrag(pos.first, pos.second)
                                     }
                                 }
                                 change.consume()
@@ -750,10 +817,12 @@ private fun VncViewer(
                         }
 
                         // Short tap with little movement = click (skip if
-                        // long press fired). Record the lift time so a
-                        // subsequent touch within 300 ms is treated as a
+                        // long press fired, or a toolbar button is held — the
+                        // held button is the press, so a tap mustn't inject an
+                        // extra button-1 click, #183). Record the lift time so
+                        // a subsequent touch within 300 ms is treated as a
                         // tap-then-drag follow-up.
-                        if (totalFingers == 1 && totalMovement < touchSlopPx && !longPressFired) {
+                        if (totalFingers == 1 && totalMovement < touchSlopPx && !longPressFired && heldButton == null) {
                             val (vx, vy) = if (inputMode == "TOUCHPAD") {
                                 virtualCursor
                             } else {
@@ -951,6 +1020,9 @@ private fun VncViewer(
                     Icon(orientationMode.icon, contentDescription = orientationMode.description)
                 }
 
+                // Explicit mouse-button hold toggles (L/M/R) — #183.
+                MouseButtonToggles(held = heldButton, onToggle = toggleHeldButton)
+
                 // App-window-only: background to an edge icon (keeps it alive).
                 onMinimize?.let { minimize ->
                     IconButton(onClick = minimize) {
@@ -1060,6 +1132,8 @@ private fun VncViewer(
                     IconButton(onClick = onCycleOrientation) {
                         Icon(orientationMode.icon, contentDescription = orientationMode.description)
                     }
+                    // Explicit mouse-button hold toggles (L/M/R) — #183.
+                    MouseButtonToggles(held = heldButton, onToggle = toggleHeldButton)
                     if (zoom != 1f || panX != 0f || panY != 0f) {
                         IconButton(onClick = {
                             zoom = 1f

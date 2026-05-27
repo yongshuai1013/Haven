@@ -220,6 +220,8 @@ fun DesktopScreen(
                             onDragEnd = { desktopViewModel.releaseButton(1) },
                             onScrollUp = { desktopViewModel.scrollUp() },
                             onScrollDown = { desktopViewModel.scrollDown() },
+                            onPressButton = { btn -> desktopViewModel.pressButton(btn) },
+                            onReleaseButton = { btn -> desktopViewModel.releaseButton(btn) },
                             onTypeChar = { ch -> desktopViewModel.typeVncKey(charToKeySym(ch)) },
                             onTypeText = { text -> desktopViewModel.typeVncText(text) },
                             onKeyDown = { keySym -> desktopViewModel.sendVncKey(keySym, true) },

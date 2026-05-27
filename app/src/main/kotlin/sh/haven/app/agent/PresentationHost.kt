@@ -355,6 +355,8 @@ private fun AppWindowContent(
             onDragEnd = { controller.dragEnd() },
             onScrollUp = { controller.scroll(true) },
             onScrollDown = { controller.scroll(false) },
+            onPressButton = { btn -> controller.pressButton(btn) },
+            onReleaseButton = { btn -> controller.releaseButton(btn) },
             onTypeChar = { c -> controller.typeText(c.toString()) },
             onTypeText = { s -> controller.typeText(s) },
             onKeyDown = { sym -> controller.key(sym, true) },
